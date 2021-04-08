@@ -51,8 +51,6 @@ spec:
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           command:
             - dothill-node
-            - -kubeletpath={{ .Values.kubeletPath }}
-            - -bind=unix://{{ .Values.kubeletPath }}/plugins/dothill.csi.enix.io/csi.sock
 {{- include "dothill.extraArgs" .Values.node | indent 10 }}
           securityContext:
             privileged: true
@@ -64,7 +62,7 @@ spec:
             - name: udev-dir
               mountPath: /run/udev
             - name: plugin-dir
-              mountPath: {{ .Values.kubeletPath }}/plugins/dothill.csi.enix.io
+              mountPath: /var/run/dothill.csi.enix.io
             - name: mountpoint-dir
               mountPath: {{ .Values.kubeletPath }}/pods
               mountPropagation: Bidirectional
