@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Seagate/csi-lib-iscsi/iscsi"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/enix/dothill-csi/pkg/common"
-	"github.com/kubernetes-csi/csi-lib-iscsi/iscsi"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
@@ -151,27 +151,14 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	}
 
 	if err = checkFs(path); err != nil {
-		return nil, status.Errorf(codes.DataLoss, "filesystem seems to be corrupted: %v", err)
+		return nil, status.Errorf(codes.DataLoss, "Filesystem seems to be corrupted: %v", err)
 	}
 
-	out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
-	mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
-	if err != nil || len(mountpoints) == 0 {
-		klog.Infof("mounting volume at %s", req.GetTargetPath())
-		os.Mkdir(req.GetTargetPath(), 00755)
-		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
-		if err != nil {
-			return nil, status.Error(codes.Internal, string(out))
-		}
-	} else if len(mountpoints) == 1 {
-		if mountpoints[0] == req.GetTargetPath() {
-			klog.Infof("volume %s already mounted", req.GetTargetPath())
-		} else {
-			errStr := fmt.Sprintf("device has already been mounted somewhere else (%s instead of %s), please unmount first", mountpoints[0], req.GetTargetPath())
-			return nil, status.Error(codes.Internal, errStr)
-		}
-	} else if len(mountpoints) > 1 {
-		return nil, errors.New("device has already been mounted in several locations, please unmount first")
+	klog.Infof("mounting volume at %s", req.GetTargetPath())
+	os.Mkdir(req.GetTargetPath(), 00755)
+	out, err := exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
+	if err != nil {
+		return nil, status.Error(codes.Internal, string(out))
 	}
 
 	iscsiInfoPath := node.getIscsiInfoPath(req.GetVolumeId())
@@ -202,19 +189,14 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 		out, err := exec.Command("mountpoint", req.GetTargetPath()).CombinedOutput()
 		if err == nil {
 			out, err := exec.Command("umount", req.GetTargetPath()).CombinedOutput()
-			if err != nil {
+			if err != nil && !os.IsNotExist(err) {
 				return nil, status.Error(codes.Internal, string(out))
 			}
 		} else {
 			klog.Warningf("assuming that volume is already unmounted: %s", out)
 		}
 
-		err = os.Remove(req.GetTargetPath())
-		if err != nil && !os.IsNotExist(err) {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
-		klog.Warningf("assuming that volume is already unmounted: %v", err)
+		os.Remove(req.GetTargetPath())
 	}
 
 	iscsiInfoPath := node.getIscsiInfoPath(req.GetVolumeId())

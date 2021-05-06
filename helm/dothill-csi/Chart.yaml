@@ -4,26 +4,21 @@ version: 0.0.0-DIRTY
 appVersion: 0.0.0-DIRTY
 description: A dynamic persistent volume (PV) provisioner for Dothill AssuredSAN based storage systems.
 type: application
-home: https://github.com/enix/dothill-csi
+home: https://github.com/Seagate/seagate-exos-x-csi
 sources:
-  - https://github.com/enix/dothill-csi/tree/main/helm/dothill-csi
+  - https://github.com/Seagate/seagate-exos-x-csi/tree/main/helm/dothill-csi
 keywords:
   - storage
   - iscsi
   - plugin
   - csi
 maintainers:
-  - name: Enix
+  - name: Seagate
     email: contact@enix.fr
-    url: https://github.com/enixsas
-  - name: Paul Laffitte
-    email: paul.laffitte@enix.fr
-    url: https://blog.plaffitt.com
-  - name: Alexandre Buisine
-    email: alexandre.buisine@enix.fr
-  - name: Arthur Chaloin
-    email: arthur.chaloin@enix.fr
+    url: https://github.com/Seagate
+  - name: Joe Skazinski
+    email: joseph.skazinski@seagate.com
 annotations:
   artifacthub.io/images: |
     - name: dothill-csi
-      image: enix/dothill-csi:0.0.0-DIRTY
+      image: docker.io/seagatecsi/dothill-csi

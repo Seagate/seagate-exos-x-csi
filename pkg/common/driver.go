@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/enix/dothill-csi/pkg/exporter"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/exporter"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"

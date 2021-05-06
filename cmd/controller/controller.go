@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/enix/dothill-csi/pkg/common"
-	"github.com/enix/dothill-csi/pkg/controller"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/controller"
 	"k8s.io/klog"
 )
 
