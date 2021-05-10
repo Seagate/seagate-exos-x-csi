@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/enix/dothill-csi/pkg/controller"
-	"github.com/enix/dothill-csi/pkg/node"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/controller"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/node"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 )
 

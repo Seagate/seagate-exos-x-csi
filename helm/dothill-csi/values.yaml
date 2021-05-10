@@ -9,10 +9,12 @@ pspAdmissionControllerEnabled: false
 
 image:
   # -- Docker repository to use for nodes and controller
-  repository: docker.io/enix/dothill-csi
+  repository: docker.io/seagatecsi/dothill-csi
   # -- Tag to use for nodes and controller
-  # @default -- The chart will use the appVersion value by default if not given.
-  tag: ""
+  # @default -- Uses Chart.appVersion value by default if tag does not specify a new version.
+  tag: "0.1.0"
+  # -- Default is set to IfNotPresent, to override use Always here to always pull the specified version
+  pullPolicy: Always
 
 # -- Controller sidecar for provisionning
 csiProvisioner:
