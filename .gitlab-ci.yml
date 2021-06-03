@@ -25,8 +25,8 @@ build and push:
     - docker login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD"
   script:
     - VERSION="$CI_COMMIT_TAG" make push
-    - docker tag "enix/dothill-csi:$CI_COMMIT_TAG" enix/dothill-csi
-    - docker push enix/dothill-csi
+    - docker tag "seagate/exosx-csi:$CI_COMMIT_TAG" seagate/exosx-csi
+    - docker push seagate/exosx-csi
   only:
     - tags
 
@@ -40,25 +40,25 @@ push helm chart:
     - cat "$GITHUB_DEPLOY_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
-    - git config --global user.email "monkeynator@enix.io"
+    - git config --global user.email "monkeynator@seagate.io"
     - git config --global user.name "Monkeynator"
   script:
-    - git clone --single-branch --branch master git@github.com:enix/helm-charts.git
-    - rm -rf ./helm-charts/charts/dothill-csi
-    - cp ./LICENSE ./helm/dothill-csi/
-    - cp -R ./helm/dothill-csi ./helm-charts/charts/dothill-csi
-    - cd ./helm-charts/charts/dothill-csi
+    - git clone --single-branch --branch master git@github.com:seagate/helm-charts.git
+    - rm -rf ./helm-charts/charts/exosx-csi
+    - cp ./LICENSE ./helm/exosx-csi/
+    - cp -R ./helm/exosx-csi ./helm-charts/charts/exosx-csi
+    - cd ./helm-charts/charts/exosx-csi
     - >
       sed -i
       -e "s/version: 0\.0\.0-DIRTY/version: ${CI_COMMIT_TAG:1}/g"
       -e "s/appVersion: 0\.0\.0-DIRTY/appVersion: $CI_COMMIT_TAG/g"
-      -e "s/image: enix\/dothill-csi:0\.0\.0-DIRTY/image: enix\/dothill-csi:$CI_COMMIT_TAG/g"
+      -e "s/image: seagate\/exosx-csi:0\.0\.0-DIRTY/image: seagate\/exosx-csi:$CI_COMMIT_TAG/g"
       ./Chart.yaml
     - helm-docs
     - rm ./README.md.gotmpl
     - git add --all
     - >
-      git commit -m "bump(dothill-csi): bump chart version to $CI_COMMIT_TAG"
+      git commit -m "bump(exosx-csi): bump chart version to $CI_COMMIT_TAG"
     - git push --set-upstream origin master
   only:
     - tags
@@ -78,7 +78,7 @@ release-candidate:
 
 semantic-release:
   stage: release
-  image: enix/semantic-release:gitlab
+  image: seagate/semantic-release:gitlab
   script:
     - npx semantic-release --ci
   rules:

@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/exporter"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
@@ -18,7 +18,7 @@ import (
 )
 
 // PluginName is the public name to be used in storage class etc.
-const PluginName = "dothill.csi.enix.io"
+const PluginName = "exosx.csi.seagate.io"
 
 // Configuration constants
 const (

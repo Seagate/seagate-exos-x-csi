@@ -9,10 +9,10 @@ else
 endif
 
 ifndef BIN
-	BIN = dothill
+	BIN = exosx
 endif
 
-IMAGE = $(DOCKER_HUB_REPOSITORY)/dothill-csi:$(VERSION)
+IMAGE = $(DOCKER_HUB_REPOSITORY)/exosx-csi:$(VERSION)
 
 help:
 	@echo ""

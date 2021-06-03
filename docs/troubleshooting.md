@@ -14,7 +14,7 @@ iscsiadm -m discovery -t st -p 10.14.84.215
 iscsiadm -m node -L all
 ```
 
-## AttachVolume.Attach failed for volume "xxx" : CSINode xxx does not contain driver dothill.csi.enix.io
+## AttachVolume.Attach failed for volume "xxx" : CSINode xxx does not contain driver exosx.csi.seagate.io
 
 Typically, this error happens when you use RancherOS. Since the kubelet path is `/opt/rke/var/lib/kubelet` instead of `/var/lib/kubelet`, the plugin cannot be registered using the default path.
 
@@ -28,7 +28,7 @@ kubeletPath: /opt/rke/var/lib/kubelet
 
 It's a known fact that when `multipathd` segfaults, it can produce wrong mappings of device paths. When such a multipathed device is mounted, it can result in a corruption of the filesystem. Some checks were added to ensure that the different paths are consistent and lead to the same volume in the appliance.
 
-If you still get this issue, please check that the candidate for the package `multipath-tools` on your host is on the same version as in the container. You can do so by running `apt-cache policy multipath-tools` on your host as well as in the container `multipathd` from one of the pod `dothill-node-server-xxxxx`.
+If you still get this issue, please check that the candidate for the package `multipath-tools` on your host is on the same version as in the container. You can do so by running `apt-cache policy multipath-tools` on your host as well as in the container `multipathd` from one of the pod `exosx-node-server-xxxxx`.
 
 ## When expanding a volume, I get the error "missing API credentials"
 

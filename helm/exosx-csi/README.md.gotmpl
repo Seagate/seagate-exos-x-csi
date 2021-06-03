@@ -1,0 +1,59 @@
+{{ template "chart.header" . }}
+{{ template "chart.deprecationWarning" . }}
+{{ template "chart.description" . }}
+
+{{ template "chart.badgesSection" . }}
+[![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/Seagate)](https://artifacthub.io/packages/search?repo=Seagate)
+
+# Introduction
+As of version `1.0.0`, this `csi` driver and the associated helm charts are released as open-source projects under the Apache 2.0 license.
+
+Your contribution is most welcome!
+
+{{ template "chart.homepageLine" . }}
+
+## This helm chart
+Is part of the project and is published on [Seagate](https://seagate.io)'s charts repository.
+
+{{ template "chart.sourcesSection" . }}
+
+# Installing the Chart
+
+Create a file named `{{ template "chart.name" . }}.values.yaml` with your values, with the help of [Chart Values](#values).
+
+Add our Charts repository:
+```
+$ helm repo add seagate https://charts.seagate.io
+```
+
+Install the {{ template "chart.name" . }} with release name `{{ template "chart.name" . }}` in the `exosx-system` namespace:
+```
+$ helm install -n exosx-system {{ template "chart.name" . }} seagate/{{ template "chart.name" . }} --values {{ template "chart.name" . }}.values.yaml
+```
+
+The `upgrade` command is used to change configuration when values are modified:
+```
+$ helm upgrade -n exosx-system {{ template "chart.name" . }} seagate/{{ template "chart.name" . }} --values {{ template "chart.name" . }}.values.yaml
+```
+
+# Upgrading the Chart
+
+Update Helm repositories:
+```
+$ helm repo update
+```
+
+Upgrade release names `{{ template "chart.name" . }}` to the latest version:
+```
+$ helm upgrade {{ template "chart.name" . }} seagate/{{ template "chart.name" . }}
+```
+
+# Creating a storage class
+
+In order to dynamically provision persistants volumes, you first need to create a storage class. To do so, please refer to the project [documentation](https://github.com/Seagate/seagate-exos-x-csi).
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

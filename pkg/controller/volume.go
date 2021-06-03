@@ -1,9 +1,9 @@
 package controller
 
-import dothill "github.com/Seagate/seagate-exos-x-api-go"
+import exosx "github.com/Seagate/seagate-exos-x-api-go"
 
 // Volumes : convenience alias fort sorting purposes
-type Volumes []dothill.Volume
+type Volumes []exosx.Volume
 
 func (v Volumes) Len() int {
 	return len(v)

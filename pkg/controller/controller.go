@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/Seagate/seagate-exos-x-api-go"
+	exosx "github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -57,7 +57,7 @@ var nonAuthenticatedMethods = []string{
 type Controller struct {
 	*common.Driver
 
-	dothillClient *dothill.Client
+	exosxClient *exosx.Client
 }
 
 // DriverCtx contains data common to most calls
@@ -69,10 +69,10 @@ type DriverCtx struct {
 
 // New is a convenience fn for creating a controller driver
 func New() *Controller {
-	dothillClient := dothill.NewClient()
+	exosxClient := exosx.NewClient()
 	controller := &Controller{
-		Driver:        common.NewDriver(dothillClient.Collector),
-		dothillClient: dothillClient,
+		Driver:      common.NewDriver(exosxClient.Collector),
+		exosxClient: exosxClient,
 	}
 
 	controller.InitServer(
@@ -150,7 +150,7 @@ func (controller *Controller) ValidateVolumeCapabilities(ctx context.Context, re
 	if len(req.GetVolumeCapabilities()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot validate volume without capabilities")
 	}
-	_, _, err := controller.dothillClient.ShowVolumes(volumeID)
+	_, _, err := controller.exosxClient.ShowVolumes(volumeID)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "cannot validate volume not found")
 	}
@@ -207,7 +207,7 @@ func (controller *Controller) beginRoutine(ctx *DriverCtx, methodName string) er
 }
 
 func (controller *Controller) endRoutine() {
-	controller.dothillClient.HTTPClient.CloseIdleConnections()
+	controller.exosxClient.HTTPClient.CloseIdleConnections()
 }
 
 func (controller *Controller) configureClient(credentials map[string]string) error {
@@ -219,17 +219,17 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return status.Error(codes.InvalidArgument, "at least one field is missing in credentials secret")
 	}
 
-	klog.Infof("using dothill API at address %s", apiAddr)
-	if controller.dothillClient.Addr == apiAddr && controller.dothillClient.Username == username {
-		klog.Info("dothill client is already configured for this API, skipping login")
+	klog.Infof("using API at address (%s)", apiAddr)
+	if controller.exosxClient.Addr == apiAddr && controller.exosxClient.Username == username {
+		klog.Info("client is already configured for this API, skipping login")
 		return nil
 	}
 
-	controller.dothillClient.Username = username
-	controller.dothillClient.Password = password
-	controller.dothillClient.Addr = apiAddr
-	klog.Infof("login into %q as user %q", controller.dothillClient.Addr, controller.dothillClient.Username)
-	err := controller.dothillClient.Login()
+	controller.exosxClient.Username = username
+	controller.exosxClient.Password = password
+	controller.exosxClient.Addr = apiAddr
+	klog.Infof("login into %q as user %q", controller.exosxClient.Addr, controller.exosxClient.Username)
+	err := controller.exosxClient.Login()
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
 	}
@@ -271,7 +271,7 @@ func runPreflightChecks(parameters *map[string]string, capabilities *[]*csi.Volu
 		}
 		for _, capability := range *capabilities {
 			if capability.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER {
-				return status.Error(codes.FailedPrecondition, "dothill storage only supports ReadWriteOnce access mode")
+				return status.Error(codes.FailedPrecondition, "storage only supports ReadWriteOnce access mode")
 			}
 		}
 	}

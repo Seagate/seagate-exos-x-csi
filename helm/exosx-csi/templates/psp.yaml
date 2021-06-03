@@ -2,7 +2,7 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: dothill
+  name: exosx
 spec:
   privileged: true
   hostNetwork: true

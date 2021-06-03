@@ -8,8 +8,8 @@ test/.env
 _legacy
 
 # binaries
-dothill-node
-dothill-controller
+seagate-exosx-node
+seagate-exosx-controller
 
 # generated documentation
 /helm/*/README.md

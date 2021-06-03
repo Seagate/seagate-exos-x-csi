@@ -16,6 +16,6 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Set("logtostderr", "true")
 	flag.Parse()
-	klog.Infof("starting dothill storage node plugin %s", common.Version)
+	klog.Infof("starting storage node plugin (%s)", common.Version)
 	node.New(*kubeletPath).Start(*bind)
 }

@@ -25,7 +25,7 @@ func (controller *Controller) ControllerExpandVolume(ctx context.Context, req *c
 	}
 	klog.V(2).Infof("requested size: %d bytes", newSize)
 
-	response, _, err := controller.dothillClient.ShowVolumes(volumeID)
+	response, _, err := controller.exosxClient.ShowVolumes(volumeID)
 	var expansionSize int64
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (controller *Controller) ControllerExpandVolume(ctx context.Context, req *c
 	}
 
 	expansionSizeStr := getSizeStr(expansionSize)
-	if _, _, err := controller.dothillClient.ExpandVolume(volumeID, expansionSizeStr); err != nil {
+	if _, _, err := controller.exosxClient.ExpandVolume(volumeID, expansionSizeStr); err != nil {
 		return nil, err
 	}
 

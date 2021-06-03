@@ -1,0 +1,5 @@
+Thank you for using Seagate Exos X provisioner. It will be up and running shortly.
+Run 'kubectl get pods' to verify that the new pods have a 'STATUS' of 'Running'.
+
+In order to dynamically provide a persistant volume, create a storage class first.
+Please refer to this example to do so: https://github.com/Seagate/seagate-exos-x-csi/blob/main/example/storage-class.yaml

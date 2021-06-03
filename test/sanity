@@ -19,7 +19,7 @@ function setup {
 	if [ ! -f ${inititatorNameFile} ]; then
 		>&2 echo "/etc/iscsi/initiatorname.iscsi is missing, please run the following commands"
 		>&2 echo -e "  sudo mkdir -p /etc/iscsi"
-		>&2 echo -e "  sudo sh -c 'echo \"InitiatorName=iqn.2020-01.io.enix:sanity-test-cluster\" > ${inititatorNameFile}'"
+		>&2 echo -e "  sudo sh -c 'echo \"InitiatorName=iqn.2021-06.io.seagate:sanity-test-cluster\" > ${inititatorNameFile}'"
 		exit 1
 	fi
 }

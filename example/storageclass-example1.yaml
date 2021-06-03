@@ -4,7 +4,7 @@ provisioner: exosx.csi.seagate.io # Check pkg/driver.go, Required for the plugin
 volumeBindingMode: WaitForFirstConsumer # Prefer this value to avoid unschedulable pods (https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
 allowVolumeExpansion: true
 metadata:
-  name: gallium-storage # Choose the name that fits the best with your StorageClass.
+  name: exosx-storageclass # Choose the name that fits the best with your StorageClass.
 parameters:
   # Secrets name and namespace, they can be the same for provisioner, controller-publish and controller-expand sections.
   csi.storage.k8s.io/provisioner-secret-name: exosx-secrets
@@ -14,6 +14,6 @@ parameters:
   csi.storage.k8s.io/controller-expand-secret-name: exosx-secrets
   csi.storage.k8s.io/controller-expand-secret-namespace: default
   fsType: ext4 # Desired filesystem
-  iqn: iqn.2015-11.com.hpe:storage.msa2040.163639c929 # Gallium 10.235.212.197 Appliance IQN
+  iqn: iqn.2015-11.com.hpe:storage.msa2040.163639c929 # Example Appliance IQN
   pool: A # Pool to use on the IQN to provision volumes
-  portals: 10.235.212.199,10.235.212.200 # Comma separated list of portal ips. Gallium 10.235.212.197 Ports A1, B1
+  portals: <ipaddress-a1>,<ipaddress-b1> # Comma separated list of portal ips. Ports A1, B1

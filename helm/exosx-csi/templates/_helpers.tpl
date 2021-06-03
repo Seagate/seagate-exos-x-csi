@@ -1,9 +1,9 @@
-{{- define "dothill.labels" -}}
+{{- define "exosx.labels" -}}
 app.kubernetes.io/name: {{ .Chart.Name | kebabcase }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{- define "dothill.extraArgs" -}}
+{{- define "exosx.extraArgs" -}}
 {{- range .extraArgs }}
   - {{ toYaml . }}
 {{- end }}

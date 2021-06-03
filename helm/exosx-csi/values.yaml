@@ -1,4 +1,4 @@
-# Default values for dothill-csi.
+# Default values for exosx-csi.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -9,10 +9,10 @@ pspAdmissionControllerEnabled: false
 
 image:
   # -- Docker repository to use for nodes and controller
-  repository: docker.io/seagatecsi/dothill-csi
+  repository: docker.io/seagatecsi/exosx-csi
   # -- Tag to use for nodes and controller
   # @default -- Uses Chart.appVersion value by default if tag does not specify a new version.
-  tag: "0.1.0"
+  tag: "latest"
   # -- Default is set to IfNotPresent, to override use Always here to always pull the specified version
   pullPolicy: Always
 
@@ -61,11 +61,11 @@ csiNodeRegistrar:
   extraArgs: []
 
 controller:
-  # -- Extra arguments for dothill-controller container
+  # -- Extra arguments for exosx-controller container
   extraArgs: []
 
 node:
-  # -- Extra arguments for dothill-node containers
+  # -- Extra arguments for exosx-node containers
   extraArgs: []
 
 multipathd:
@@ -81,9 +81,9 @@ nodeLivenessProbe:
   extraArgs: []
 
 nodeServer:
-  # -- Kubernetes nodeSelector field for dothill-node-server Pod
+  # -- Kubernetes nodeSelector field for exosx-node-server Pod
   nodeSelector:
-  # -- Kubernetes nodeAffinity field for dothill-node-server Pod
+  # -- Kubernetes nodeAffinity field for exosx-node-server Pod
   nodeAffinity:
 
 podMonitor:

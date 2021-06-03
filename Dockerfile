@@ -16,15 +16,15 @@ COPY Makefile ./
 
 ARG version
 
-RUN BIN="/dothill" VERSION="$version" make controller
-RUN BIN="/dothill" VERSION="$version" make node
+RUN BIN="/exosx" VERSION="$version" make controller
+RUN BIN="/exosx" VERSION="$version" make node
 
 ###########################################
 
 FROM ubuntu:18.04
 
-LABEL org.opencontainers.image.title="Dothill CSI" \
-      org.opencontainers.image.description="A dynamic persistent volume provisioner for Dothill AssuredSAN based storage systems." \
+LABEL org.opencontainers.image.title="Seagate Exos X CSI" \
+      org.opencontainers.image.description="A dynamic persistent volume provisioner for Seagate Exos X based storage systems." \
       org.opencontainers.image.url="https://github.com/Seagate/seagate-exos-x-csi" \
       org.opencontainers.image.source="https://github.com/Seagate/seagate-exos-x-csi/blob/master/Dockerfile" \
       org.opencontainers.image.documentation="https://github.com/Seagate/seagate-exos-x-csi/blob/master/README.md" \
@@ -35,9 +35,9 @@ RUN apt update \
  && apt install -y dosfstools e2fsprogs xfsprogs jfsutils libisns0 open-iscsi kmod multipath-tools \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /dothill-* /usr/local/bin/
+COPY --from=build /exosx-* /usr/local/bin/
 
-CMD [ "/usr/local/bin/dothill-controller" ]
+CMD [ "/usr/local/bin/exosx-controller" ]
 
 ARG version
 ARG vcs_ref

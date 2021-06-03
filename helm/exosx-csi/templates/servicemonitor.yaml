@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: dothill-controller-metrics
+  name: exosx-controller-metrics
   labels:
-    name: dothill-controller-metrics
-{{ include "dothill.labels" . | indent 4 }}
+    name: exosx-controller-metrics
+{{ include "exosx.labels" . | indent 4 }}
 spec:
   ports:
   - name: metrics
@@ -13,18 +13,18 @@ spec:
     targetPort: metrics
     protocol: TCP
   selector:
-    app: dothill-controller-server
+    app: exosx-controller-server
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: dothill-controller-exporter
+  name: exosx-controller-exporter
   labels:
-{{ include "dothill.labels" . | indent 4 }}
+{{ include "exosx.labels" . | indent 4 }}
 spec:
   selector:
     matchLabels:
-      name: dothill-controller-metrics
+      name: exosx-controller-metrics
   endpoints:
   - port: metrics
     interval: 1s

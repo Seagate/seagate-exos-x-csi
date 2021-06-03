@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/Seagate/seagate-exos-x-api-go"
+	exosx "github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
 )
 
-func getVolumeMapsHostNames(client *dothill.Client, name string) ([]string, *dothill.ResponseStatus, error) {
+func getVolumeMapsHostNames(client *exosx.Client, name string) ([]string, *exosx.ResponseStatus, error) {
 	if name != "" {
 		name = fmt.Sprintf("\"%s\"", name)
 	}
@@ -56,7 +56,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	initiatorName := req.GetNodeId()
 	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, req.GetVolumeId())
 
-	hostNames, _, err := getVolumeMapsHostNames(driver.dothillClient, req.GetVolumeId())
+	hostNames, _, err := getVolumeMapsHostNames(driver.exosxClient, req.GetVolumeId())
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 	}
 
 	klog.Infof("unmapping volume %s from initiator %s", req.GetVolumeId(), req.GetNodeId())
-	_, status, err := driver.dothillClient.UnmapVolume(req.GetVolumeId(), req.GetNodeId())
+	_, status, err := driver.exosxClient.UnmapVolume(req.GetVolumeId(), req.GetNodeId())
 	if err != nil {
 		if status != nil && status.ReturnCode == unmapFailedErrorCode {
 			klog.Info("unmap failed, assuming volume is already unmapped")
@@ -105,7 +105,7 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 
 func (driver *Controller) chooseLUN(initiatorName string) (int, error) {
 	klog.Infof("listing all LUN mappings")
-	volumes, responseStatus, err := driver.dothillClient.ShowHostMaps(initiatorName)
+	volumes, responseStatus, err := driver.exosxClient.ShowHostMaps(initiatorName)
 	if err != nil && responseStatus == nil {
 		return -1, err
 	}
@@ -141,7 +141,7 @@ func (driver *Controller) chooseLUN(initiatorName string) (int, error) {
 
 func (driver *Controller) mapVolume(volumeName, initiatorName string, lun int) error {
 	klog.Infof("trying to map volume %s for initiator %s on LUN %d", volumeName, initiatorName, lun)
-	_, metadata, err := driver.dothillClient.MapVolume(volumeName, initiatorName, "rw", lun)
+	_, metadata, err := driver.exosxClient.MapVolume(volumeName, initiatorName, "rw", lun)
 	if err != nil && metadata == nil {
 		return err
 	}
@@ -153,12 +153,12 @@ func (driver *Controller) mapVolume(volumeName, initiatorName string, lun int) e
 
 		nodeName := strings.Join(nodeIDParts[1:], ":")
 		klog.Infof("initiator does not exist, creating it with nickname %s", nodeName)
-		_, _, err = driver.dothillClient.CreateHost(nodeName, initiatorName)
+		_, _, err = driver.exosxClient.CreateHost(nodeName, initiatorName)
 		if err != nil {
 			return err
 		}
 		klog.Info("retrying to map volume")
-		_, _, err = driver.dothillClient.MapVolume(volumeName, initiatorName, "rw", lun)
+		_, _, err = driver.exosxClient.MapVolume(volumeName, initiatorName, "rw", lun)
 		if err != nil {
 			return err
 		}
