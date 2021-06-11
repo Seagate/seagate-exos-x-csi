@@ -1,19 +1,19 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
-provisioner: exosx.csi.seagate.io # Check pkg/driver.go, Required for the plugin to recognize this storage class as handled by itself.
+provisioner: systems.csi.seagate.io # Check pkg/driver.go, Required for the plugin to recognize this storage class as handled by itself.
 volumeBindingMode: WaitForFirstConsumer # Prefer this value to avoid unschedulable pods (https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
 allowVolumeExpansion: true
 metadata:
-  name: exosx-storageclass # Choose the name that fits the best with your StorageClass.
+  name: systems-storageclass # Choose the name that fits the best with your StorageClass.
 parameters:
   # Secrets name and namespace, they can be the same for provisioner, controller-publish and controller-expand sections.
-  csi.storage.k8s.io/provisioner-secret-name: exosx-secrets
+  csi.storage.k8s.io/provisioner-secret-name: seagate-csi-secrets
   csi.storage.k8s.io/provisioner-secret-namespace: default
-  csi.storage.k8s.io/controller-publish-secret-name: exosx-secrets
+  csi.storage.k8s.io/controller-publish-secret-name: seagate-csi-secrets
   csi.storage.k8s.io/controller-publish-secret-namespace: default
-  csi.storage.k8s.io/controller-expand-secret-name: exosx-secrets
+  csi.storage.k8s.io/controller-expand-secret-name: seagate-csi-secrets
   csi.storage.k8s.io/controller-expand-secret-namespace: default
   fsType: ext4 # Desired filesystem
-  iqn: iqn.2015-11.com.hpe:storage.msa2040.163639c929 # Example Appliance IQN
+  iqn: <iqn> # Example Appliance IQN
   pool: A # Pool to use on the IQN to provision volumes
   portals: <ipaddress-a1>,<ipaddress-b1> # Comma separated list of portal ips. Ports A1, B1

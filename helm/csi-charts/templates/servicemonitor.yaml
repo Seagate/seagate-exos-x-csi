@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: exosx-controller-metrics
+  name: systems-controller-metrics
   labels:
-    name: exosx-controller-metrics
-{{ include "exosx.labels" . | indent 4 }}
+    name: systems-controller-metrics
+{{ include "csidriver.labels" . | indent 4 }}
 spec:
   ports:
   - name: metrics
@@ -13,18 +13,18 @@ spec:
     targetPort: metrics
     protocol: TCP
   selector:
-    app: exosx-controller-server
+    app: seagate-csi-controller-server
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: exosx-controller-exporter
+  name: seagate-csi-controller-exporter
   labels:
-{{ include "exosx.labels" . | indent 4 }}
+{{ include "csidriver.labels" . | indent 4 }}
 spec:
   selector:
     matchLabels:
-      name: exosx-controller-metrics
+      name: systems-controller-metrics
   endpoints:
   - port: metrics
     interval: 1s

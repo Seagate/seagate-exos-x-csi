@@ -1,11 +1,11 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: exosx-controller-server
+  name: seagate-csi-controller-server
   labels:
     app.kubernetes.io/version: {{ .Chart.Version }}
     app.kubernetes.io/component: dynamic-provisionning-controller
-{{ include "exosx.labels" . | indent 4 }}
+{{ include "csidriver.labels" . | indent 4 }}
 
 spec:
   replicas: 1
@@ -13,22 +13,22 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: exosx-controller-server
-{{ include "exosx.labels" . | indent 6 }}
+      app: seagate-csi-controller-server
+{{ include "csidriver.labels" . | indent 6 }}
   template:
     metadata:
       labels:
-        app: exosx-controller-server
-{{ include "exosx.labels" . | indent 8 }}
+        app: seagate-csi-controller-server
+{{ include "csidriver.labels" . | indent 8 }}
     spec:
       serviceAccount: csi-provisioner
       containers:
-        - name: exosx-controller
+        - name: seagate-csi-controller
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           command:
-            - exosx-controller
+            - seagate-csi-controller
             - -bind=unix:///csi/csi.sock
-{{- include "exosx.extraArgs" .Values.controller | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.controller | indent 10 }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -42,7 +42,7 @@ spec:
             - --csi-address=/csi/csi.sock
             - --worker-threads=1
             - --timeout={{ .Values.csiProvisioner.timeout }}
-{{- include "exosx.extraArgs" .Values.csiProvisioner | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.csiProvisioner | indent 10 }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: socket-dir
@@ -53,7 +53,7 @@ spec:
             - --csi-address=/csi/csi.sock
             - --worker-threads=1
             - --timeout={{ .Values.csiAttacher.timeout }}
-{{- include "exosx.extraArgs" .Values.csiAttacher | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.csiAttacher | indent 10 }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: socket-dir
@@ -62,7 +62,7 @@ spec:
           image: {{ .Values.csiResizer.image.repository }}:{{ .Values.csiResizer.image.tag }}
           args:
             - --csi-address=/csi/csi.sock
-{{- include "exosx.extraArgs" .Values.csiResizer | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.csiResizer | indent 10 }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: socket-dir
@@ -71,7 +71,7 @@ spec:
           image: {{ .Values.csiSnapshotter.image.repository }}:{{ .Values.csiSnapshotter.image.tag }}
           args:
             - --csi-address=/csi/csi.sock
-{{- include "exosx.extraArgs" .Values.csiSnapshotter | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.csiSnapshotter | indent 10 }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: socket-dir

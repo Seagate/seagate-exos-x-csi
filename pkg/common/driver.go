@@ -18,7 +18,7 @@ import (
 )
 
 // PluginName is the public name to be used in storage class etc.
-const PluginName = "exosx.csi.seagate.io"
+const PluginName = "systems.csi.seagate.io"
 
 // Configuration constants
 const (

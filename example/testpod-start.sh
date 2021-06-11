@@ -4,7 +4,7 @@ source common.sh
 
 echo "[] testpod-start ($1)"
 
-helmpath=../helm/exosx-csi/
+helmpath=../helm/csi-charts/
 
 if [ -z ${1+x} ]; then
     echo ""
@@ -72,7 +72,7 @@ fi
 #
 # 2) Create secrets for the CSI Driver
 #
-secret=exosx-secrets
+secret=seagate-csi-secrets
 
 banner "2) kubectl create -f secret-$system.yaml"
 runCommand "kubectl create -f secret-$system.yaml"
@@ -88,7 +88,7 @@ fi
 #
 # 3) Create the Storage Class
 #
-storageclass=exosx-storageclass
+storageclass=systems-storageclass
 
 banner "3) kubectl create -f storageclass-$system.yaml"
 runCommand "kubectl create -f storageclass-$system.yaml"

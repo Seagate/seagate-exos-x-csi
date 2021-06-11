@@ -1,9 +1,9 @@
 package controller
 
-import exosx "github.com/Seagate/seagate-exos-x-api-go"
+import storageapi "github.com/Seagate/seagate-exos-x-api-go"
 
 // Volumes : convenience alias fort sorting purposes
-type Volumes []exosx.Volume
+type Volumes []storageapi.Volume
 
 func (v Volumes) Len() int {
 	return len(v)

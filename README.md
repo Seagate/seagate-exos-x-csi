@@ -1,6 +1,6 @@
-# Seagate EXOS X CSI dynamic provisioner for Kubernetes
+# Seagate CSI dynamic provisioner for Kubernetes
 
-A dynamic persistent volume (PV) provisioner for Seagate EXOS X based storage systems.
+A dynamic persistent volume (PV) provisioner for Seagate based storage systems.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seagate/seagate-exos-x-csi)](https://goreportcard.com/report/github.com/Seagate/seagate-exos-x-csi)
 
@@ -15,7 +15,7 @@ Seagate continues to maintain the line-up with subsequent series :
 
 ## This project
 
-`exosx-csi` implements the **Container Storage Interface** in order to facilitate dynamic provisioning of persistent volumes on a Kubernetes cluster.
+This project implements the **Container Storage Interface** in order to facilitate dynamic provisioning of persistent volumes on a Kubernetes cluster.
 
 All Exos X based equipements share a common API.
 
@@ -41,7 +41,7 @@ The preferred installation approach is to use the provided `Helm Charts` under t
 
 #### Configure your release
 
-- Update `helm/exosx-csi/values.yaml` to match your configuration settings.
+- Update `helm/csi-charts/values.yaml` to match your configuration settings.
 - Update `example/secret-example1.yaml` with your storage controller credentials.
 - Update `example/storageclass-example1.yaml` with your storage controller values.
 - Update `example/testpod-example1.yaml` with any of you new values.

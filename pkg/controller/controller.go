@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	exosx "github.com/Seagate/seagate-exos-x-api-go"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
@@ -57,7 +57,7 @@ var nonAuthenticatedMethods = []string{
 type Controller struct {
 	*common.Driver
 
-	exosxClient *exosx.Client
+	client *storageapi.Client
 }
 
 // DriverCtx contains data common to most calls
@@ -69,10 +69,10 @@ type DriverCtx struct {
 
 // New is a convenience fn for creating a controller driver
 func New() *Controller {
-	exosxClient := exosx.NewClient()
+	client := storageapi.NewClient()
 	controller := &Controller{
-		Driver:      common.NewDriver(exosxClient.Collector),
-		exosxClient: exosxClient,
+		Driver: common.NewDriver(client.Collector),
+		client: client,
 	}
 
 	controller.InitServer(
@@ -150,7 +150,7 @@ func (controller *Controller) ValidateVolumeCapabilities(ctx context.Context, re
 	if len(req.GetVolumeCapabilities()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot validate volume without capabilities")
 	}
-	_, _, err := controller.exosxClient.ShowVolumes(volumeID)
+	_, _, err := controller.client.ShowVolumes(volumeID)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "cannot validate volume not found")
 	}
@@ -207,7 +207,7 @@ func (controller *Controller) beginRoutine(ctx *DriverCtx, methodName string) er
 }
 
 func (controller *Controller) endRoutine() {
-	controller.exosxClient.HTTPClient.CloseIdleConnections()
+	controller.client.HTTPClient.CloseIdleConnections()
 }
 
 func (controller *Controller) configureClient(credentials map[string]string) error {
@@ -220,16 +220,16 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	}
 
 	klog.Infof("using API at address (%s)", apiAddr)
-	if controller.exosxClient.Addr == apiAddr && controller.exosxClient.Username == username {
+	if controller.client.Addr == apiAddr && controller.client.Username == username {
 		klog.Info("client is already configured for this API, skipping login")
 		return nil
 	}
 
-	controller.exosxClient.Username = username
-	controller.exosxClient.Password = password
-	controller.exosxClient.Addr = apiAddr
-	klog.Infof("login into %q as user %q", controller.exosxClient.Addr, controller.exosxClient.Username)
-	err := controller.exosxClient.Login()
+	controller.client.Username = username
+	controller.client.Password = password
+	controller.client.Addr = apiAddr
+	klog.Infof("login into %q as user %q", controller.client.Addr, controller.client.Username)
+	err := controller.client.Login()
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
 	}

@@ -14,7 +14,7 @@ import (
 )
 
 func (controller *Controller) checkVolumeExists(volumeID string, size int64) (bool, error) {
-	data, responseStatus, err := controller.exosxClient.ShowVolumes(volumeID)
+	data, responseStatus, err := controller.client.ShowVolumes(volumeID)
 	if err != nil && responseStatus.ReturnCode != -10058 {
 		return false, err
 	}
@@ -71,9 +71,9 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		}
 
 		if sourceID != "" {
-			_, _, err = controller.exosxClient.CopyVolume(sourceID, volumeID, parameters[common.PoolConfigKey])
+			_, _, err = controller.client.CopyVolume(sourceID, volumeID, parameters[common.PoolConfigKey])
 		} else {
-			_, _, err = controller.exosxClient.CreateVolume(volumeID, sizeStr, parameters[common.PoolConfigKey])
+			_, _, err = controller.client.CreateVolume(volumeID, sizeStr, parameters[common.PoolConfigKey])
 		}
 		if err != nil {
 			return nil, err
@@ -101,7 +101,7 @@ func (controller *Controller) DeleteVolume(ctx context.Context, req *csi.DeleteV
 	}
 
 	klog.Infof("deleting volume %s", req.GetVolumeId())
-	_, respStatus, err := controller.exosxClient.DeleteVolume(req.GetVolumeId())
+	_, respStatus, err := controller.client.DeleteVolume(req.GetVolumeId())
 	if err != nil {
 		if respStatus != nil {
 			if respStatus.ReturnCode == volumeNotFoundErrorCode {

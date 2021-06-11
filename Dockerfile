@@ -16,8 +16,8 @@ COPY Makefile ./
 
 ARG version
 
-RUN BIN="/exosx" VERSION="$version" make controller
-RUN BIN="/exosx" VERSION="$version" make node
+RUN BIN="/csi" VERSION="$version" make controller
+RUN BIN="/csi" VERSION="$version" make node
 
 ###########################################
 
@@ -35,9 +35,9 @@ RUN apt update \
  && apt install -y dosfstools e2fsprogs xfsprogs jfsutils libisns0 open-iscsi kmod multipath-tools \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /exosx-* /usr/local/bin/
+COPY --from=build /seagate-csi-* /usr/local/bin/
 
-CMD [ "/usr/local/bin/exosx-controller" ]
+CMD [ "/usr/local/bin/seagate-csi-controller" ]
 
 ARG version
 ARG vcs_ref

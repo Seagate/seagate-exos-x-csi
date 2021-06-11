@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: exosx-node-server
+  name: seagate-csi-node-server
   labels:
     app.kubernetes.io/version: {{ .Chart.Version }}
     app.kubernetes.io/component: dynamic-provisionning-node
-{{ include "exosx.labels" . | indent 4 }}
+{{ include "csidriver.labels" . | indent 4 }}
 
 spec:
   selector:
     matchLabels:
-      name: exosx-node-server
-{{ include "exosx.labels" . | indent 6 }}
+      name: seagate-csi-node-server
+{{ include "csidriver.labels" . | indent 6 }}
   template:
     metadata:
       labels:
-        name: exosx-node-server
-{{ include "exosx.labels" . | indent 8 }}
+        name: seagate-csi-node-server
+{{ include "csidriver.labels" . | indent 8 }}
     spec:
       {{ if .Values.pspAdmissionControllerEnabled }}serviceAccount: csi-node-registrar{{ end }}
       hostNetwork: true
@@ -47,13 +47,13 @@ spec:
               mountPath: /usr/local/bin/init-node.sh
               subPath: init-node.sh
       containers:
-        - name: exosx-node
+        - name: seagate-csi-node
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           command:
-            - exosx-node
+            - seagate-csi-node
             - -kubeletpath={{ .Values.kubeletPath }}
-            - -bind=unix://{{ .Values.kubeletPath }}/plugins/exosx.csi.seagate.io/csi.sock
-{{- include "exosx.extraArgs" .Values.node | indent 10 }}
+            - -bind=unix://{{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io/csi.sock
+{{- include "csidriver.extraArgs" .Values.node | indent 10 }}
           securityContext:
             privileged: true
           volumeMounts:
@@ -64,7 +64,7 @@ spec:
             - name: udev-dir
               mountPath: /run/udev
             - name: plugin-dir
-              mountPath: {{ .Values.kubeletPath }}/plugins/exosx.csi.seagate.io
+              mountPath: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
             - name: mountpoint-dir
               mountPath: {{ .Values.kubeletPath }}/pods
               mountPropagation: Bidirectional
@@ -93,7 +93,7 @@ spec:
             - name: iscsi-dir
               mountPath: /etc/iscsi
             - name: plugin-dir
-              mountPath: {{ .Values.kubeletPath }}/plugins/exosx.csi.seagate.io
+              mountPath: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
             - name: mountpoint-dir
               mountPath: {{ .Values.kubeletPath }}/pods
               mountPropagation: Bidirectional
@@ -103,7 +103,7 @@ spec:
             - multipathd
             - -d
             - -s
-{{- include "exosx.extraArgs" .Values.multipathd | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.multipathd | indent 10 }}
           securityContext:
             privileged: true
           volumeMounts:
@@ -120,7 +120,7 @@ spec:
           image: {{.Values.nodeLivenessProbe.image.repository }}:{{ .Values.nodeLivenessProbe.image.tag }}
           args:
             - --csi-address=/csi/csi.sock
-{{- include "exosx.extraArgs" .Values.nodeLivenessProbe | indent 10 }}
+{{- include "csidriver.extraArgs" .Values.nodeLivenessProbe | indent 10 }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -128,8 +128,8 @@ spec:
           image: {{ .Values.csiNodeRegistrar.image.repository }}:{{ .Values.csiNodeRegistrar.image.tag }}
           args:
             - --csi-address=/csi/csi.sock
-            - --kubelet-registration-path={{ .Values.kubeletPath }}/plugins/exosx.csi.seagate.io/csi.sock
-{{- include "exosx.extraArgs" .Values.csiNodeRegistrar | indent 10 }}
+            - --kubelet-registration-path={{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io/csi.sock
+{{- include "csidriver.extraArgs" .Values.csiNodeRegistrar | indent 10 }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -153,7 +153,7 @@ spec:
             path: {{ .Values.kubeletPath }}/pods
         - name: plugin-dir
           hostPath:
-            path: {{ .Values.kubeletPath }}/plugins/exosx.csi.seagate.io
+            path: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
             type: DirectoryOrCreate
         - name: kernel-modules
           hostPath:
