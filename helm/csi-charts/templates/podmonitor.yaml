@@ -2,13 +2,13 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: dothill-node-exporter
+  name: seagate-csi-node-exporter
   labels:
-{{ include "dothill.labels" . | indent 4 }}
+{{ include "csidriver.labels" . | indent 4 }}
 spec:
   selector:
     matchLabels:
-      name: dothill-node-server
+      name: seagate-csi-node-server
   podMetricsEndpoints:
   - port: metrics
 {{- end }}

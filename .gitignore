@@ -8,8 +8,8 @@ test/.env
 _legacy
 
 # binaries
-dothill-node
-dothill-controller
+seagate-csi-node
+seagate-csi-controller
 
 # generated documentation
 /helm/*/README.md

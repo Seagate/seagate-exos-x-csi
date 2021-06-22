@@ -16,8 +16,8 @@ ARG version
 
 RUN echo "package common\nconst Version = \"${version}\"" > ./pkg/common/version.go
 
-COPY dothill-controller /
-COPY dothill-node /
+COPY seagate-csi-controller /
+COPY seagate-csi-node /
 RUN ls -l /
 
 ###########################################
@@ -29,10 +29,12 @@ RUN apt update \
  && apt install -y dosfstools e2fsprogs xfsprogs jfsutils libisns0 open-iscsi kmod multipath-tools \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /dothill-* /usr/local/bin/
+COPY /seagate-csi-controller /usr/local/bin/
+COPY /seagate-csi-node /usr/local/bin/
 RUN ls -l /usr/local/bin/
+RUN ls -l /usr/local/bin/seagate-csi-controller
 
-CMD [ "/usr/local/bin/dothill-controller" ]
+CMD [ "/usr/local/bin/seagate-csi-controller" ]
 
 ARG version
 ARG vcs_ref

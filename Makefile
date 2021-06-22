@@ -9,10 +9,10 @@ else
 endif
 
 ifndef BIN
-	BIN = dothill
+	BIN = seagate-csi
 endif
 
-IMAGE = $(DOCKER_HUB_REPOSITORY)/dothill-csi:$(VERSION)
+IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
 
 help:
 	@echo ""

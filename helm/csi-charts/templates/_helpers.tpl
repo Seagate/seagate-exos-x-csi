@@ -1,9 +1,9 @@
-{{- define "dothill.labels" -}}
+{{- define "csidriver.labels" -}}
 app.kubernetes.io/name: {{ .Chart.Name | kebabcase }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{- define "dothill.extraArgs" -}}
+{{- define "csidriver.extraArgs" -}}
 {{- range .extraArgs }}
   - {{ toYaml . }}
 {{- end }}

@@ -1,64 +1,31 @@
-# Dothill-csi dynamic provisioner for Kubernetes
+# Seagate CSI dynamic provisioner for Kubernetes
 
-A dynamic persistent volume (PV) provisioner for Dothill AssuredSAN based storage systems.
+A dynamic persistent volume (PV) provisioner for Seagate based storage systems.
 
-[![Build status](https://gitlab.com/enix.io/dothill-csi/badges/main/pipeline.svg)](https://gitlab.com/enix.io/dothill-csi/-/pipelines)
-[![Go Report Card](https://goreportcard.com/badge/github.com/enix/dothill-csi)](https://goreportcard.com/report/github.com/enix/dothill-csi)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Seagate/seagate-exos-x-csi)](https://goreportcard.com/report/github.com/Seagate/seagate-exos-x-csi)
 
 ## Introduction
 
-Dealing with persistent storage on kubernetes can be particularly cumbersome, especially when dealing with on-premises installations, or when the cloud-provider persistent storage solutions are not applicable.
+Dealing with persistent storage on Kubernetes can be particularly cumbersome, especially when dealing with on-premises installations, or when the cloud-provider persistent storage solutions are not applicable.
 
 Entry-level SAN appliances usually propose a low-cost, still powerful, solution to enable redundant persistent storage, with the flexibility of attaching it to any host on your network.
-
-Dothill systems was acquired by Seagate in 2015 for its AssuredSAN family of hybrid storage.
 
 Seagate continues to maintain the line-up with subsequent series :
 - [Seagate AssuredSAN](https://www.seagate.com/fr/fr/support/dothill-san/assuredsan-pro-5000-series/) 3000/4000/5000/6000 series
 
-It is also privately labeled by some of the world's most prominent storage brands :
-- [Hewlett Packard Enterprise MSA](https://www.hpe.com/fr/fr/storage/msa-shared-storage.html) 1050, 1060, 1062 and 2050, 2060, 2062 models.
-- [Dell EMC PowerVault ME4](https://www.dell.com/en-us/work/shop/productdetailstxn/powervault-me4-series) series.
-- Quantum StorNex series.
-- Lenovo DS series.
-- ...
-
 ## This project
 
-`Dothill-CSI` implements the **Container Storage Interface** in order to facilitate dynamic provisioning of persistent volumes on kubernetes cluster.
+This project implements the **Container Storage Interface** in order to facilitate dynamic provisioning of persistent volumes on a Kubernetes cluster.
 
-All dothill AssuredSAN based equipements share a common API which **may or may not be advertised** by the final integrator.
-Although this project is developped and tested on HPE MSA 2050 & 2060 equipments, it should work with a lot of other references from various brands.
-We are therefore looking for tests and feedbacks while using other references.
+All Exos X based equipements share a common API.
 
-Considering that this project reached a certain level of maturity, and as of version `3.0.0`, this csi driver is proposed as an open-source project under the MIT [license](./LICENSE).
-
-## Roadmap
-
-This project has reached a `beta` stage, and we hope to promote it to `general availability` with the help of external users and contributors. Feel free to help !
-
-The following features are considered for the near future :
-- PV snapshotting (supported by AssuredSAN appliances)
-- additional prometheus metrics
-
-To a lesser extent, the following features are considered for a longer term future :
-- Raw blocks support
-- FiberChannel (supported by AssuredSAN appliances)
-- Authentication proxy, as appliances lack correct right management
+This CSI driver is an open-source project under the Apache 2.0 [license](./LICENSE).
 
 ## Features
-
-| Features / Availability   |  roadmap  | alpha | beta  | general availability |
-|---------------------------|-----------|-------|-------|----------------------|
-| dynamic provisioning      |           |       | 2.3.x |                      |
-| resize                    |           | 2.4.x | 3.0.0 |                      |
-| snapshot                  |           | 3.1.x |       |                      |
-| prometheus metrics        |           | 3.1.x |       |                      |
-| raw blocks                | long term |       |       |                      |
-| iscsi chap authentication | long term |       |       |                      |
-| fiber channel             | long term |       |       |                      |
-| authentication proxy      | long term |       |       |                      |
-| overview web ui           | long term |       |       |                      |
+- dynamic provisioning
+- resize
+- snapshot
+- prometheus metrics
 
 ## Installation
 
@@ -66,37 +33,31 @@ To a lesser extent, the following features are considered for a longer term futu
 
 `iscsid` and `multipathd` are now shipped as sidecars on each nodes, it is therefore strongly suggested to uninstall any `open-iscsi` and `multipath-tools` package.
 
-The decision of shipping `iscsid` and `multipathd` as sidecars comes from the desire to simplify the developpement process, as well as improving monitoring. It's essential that versions of those softwares match the candidates versions on your hosts, more about this in the [FAQ](./docs/troubleshooting.md#multipathd-segfault-or-a-volume-got-corrupted). This setup is currently being challenged ... see [issue #88](https://github.com/enix/dothill-csi/issues/88) for more information.
+The decision of shipping `iscsid` and `multipathd` as sidecars comes from the desire to simplify the developpement process, as well as improving monitoring. It's essential that versions of those softwares match the candidates versions on your hosts, more about this in the [FAQ](./docs/troubleshooting.md#multipathd-segfault-or-a-volume-got-corrupted). This setup is currently being challenged.
 
 ### Deploy the provisioner to your kubernetes cluster
 
-The preferred approach to install this project is to use the provided [Helm Chart](https://artifacthub.io/packages/helm/enix/dothill-csi).
+The preferred installation approach is to use the provided `Helm Charts` under the helm folder.
 
 #### Configure your release
 
-Create a `values.yaml` file. It should contain configuration for your release.
+- Update `helm/csi-charts/values.yaml` to match your configuration settings.
+- Update `example/secret-example1.yaml` with your storage controller credentials.
+- Update `example/storageclass-example1.yaml` with your storage controller values.
+- Update `example/testpod-example1.yaml` with any of you new values.
 
-Please read the dothill-csi helm-chart [README.md](https://github.com/enix/helm-charts/blob/master/charts/dothill-csi/README.md#values) for more details about this file.
-
-#### Install the helm chart
-
-You should first add our charts repository, and then install the chart as follows.
+#### Run the Installation Script
 
 ```sh
-helm repo add enix https://charts.enix.io/
-helm install my-release enix/dothill-csi -f ./example/values.yaml
+cd example
+./testpod-start.sh example1
 ```
 
-### Create a storage class
-
-In order to dynamically provision persistants volumes, you first need to create a storage class as well as his associated secret. To do so, please refer to this [example](./example/storage-class.yaml).
-
-### Run a test pod
-
-To make sure everything went well, there's a example pod you can deploy in the `example/` directory. If the pod reaches the `Running` status, you're good to go!
+This script will install the local helm charts, create secrets, create the storage class, and then create a test pod. To clean up after a run.
 
 ```sh
-kubectl apply -f example/pod.yaml
+cd example
+./testpod-stop.sh
 ```
 
 ## Documentation

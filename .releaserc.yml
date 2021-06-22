@@ -1,4 +1,4 @@
-repositoryUrl: git@github.com:enix/dothill-csi.git
+repositoryUrl: git@github.com:Seagate/seagate-exos-x-csi.git
 branches:
   - main
 plugins:

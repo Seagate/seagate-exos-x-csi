@@ -30,18 +30,18 @@ spec:
 apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshotClass
 metadata:
-  name: snapshot-class-dothill
-driver: dothill.csi.enix.io
+  name: snapshot-class-seagate-csi
+driver: systems.csi.seagate.io
 deletionPolicy: Delete
 parameters:
-  csi.storage.k8s.io/snapshotter-secret-name: dothill-api
-  csi.storage.k8s.io/snapshotter-secret-namespace: dothill-system
+  csi.storage.k8s.io/snapshotter-secret-name: snapshotter-secrets
+  csi.storage.k8s.io/snapshotter-secret-namespace: seagate-csi-system
 ---
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
 metadata:
   name: test-snapshot
 spec:
-  volumeSnapshotClassName: snapshot-class-dothill
+  volumeSnapshotClassName: snapshot-class-seagate-csi
   source:
     persistentVolumeClaimName: claim

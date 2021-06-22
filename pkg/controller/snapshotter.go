@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	storageapi "github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc/codes"
@@ -21,12 +21,12 @@ import (
 func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	name := strings.Replace(req.Name[9:], "-", "", -1)
 
-	_, respStatus, err := controller.dothillClient.CreateSnapshot(req.SourceVolumeId, name)
+	_, respStatus, err := controller.client.CreateSnapshot(req.SourceVolumeId, name)
 	if err != nil && respStatus.ReturnCode != snapshotAlreadyExists {
 		return nil, err
 	}
 
-	response, _, err := controller.dothillClient.ShowSnapshots(name)
+	response, _, err := controller.client.ShowSnapshots(name)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 
 // DeleteSnapshot deletes a snapshot of the given volume
 func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	_, status, err := controller.dothillClient.DeleteSnapshot(req.SnapshotId)
+	_, status, err := controller.client.DeleteSnapshot(req.SnapshotId)
 	if err != nil {
 		if status != nil && status.ReturnCode == snapshotNotFoundErrorCode {
 			klog.Infof("snapshot %s does not exist, assuming it has already been deleted", req.SnapshotId)
@@ -69,7 +69,7 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 
 // ListSnapshots list existing snapshots
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	response, _, err := controller.dothillClient.ShowSnapshots()
+	response, _, err := controller.client.ShowSnapshots()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSn
 	}, nil
 }
 
-func newSnapshotFromResponse(object *dothill.Object) (*csi.Snapshot, error) {
+func newSnapshotFromResponse(object *storageapi.Object) (*csi.Snapshot, error) {
 	properties, err := object.GetProperties("total-size-numeric", "name", "master-volume-name", "creation-date-time-numeric")
 	if err != nil {
 		return nil, fmt.Errorf("could not read snapshot %v", err)
