@@ -34,9 +34,12 @@ This CSI driver is an open-source project under the Apache 2.0 [license](./LICEN
 `iscsid` and `multipathd` must be installed on every node. Check the installation method appropriate for your Linux distribution.
 #### Ubuntu installation procedure
 - Install required packages:
+```
     sudo apt update && sudo apt install open-iscsi scsitools multipath-tools
+```
 - Install packages for the required filesystem (ext3/ext4/xfs)
 - Update /etc/multipath.conf with the following lines:
+```
     defaults {
       polling_interval 2
       find_multipaths "yes"
@@ -59,9 +62,11 @@ This CSI driver is an open-source project under the Apache 2.0 [license](./LICEN
             no_path_retry 18
             }
     }
+```
 - Restart MultipathD
+```
     service multipath-tools restart
-
+```
 
 ### Deploy the provisioner to your kubernetes cluster
 
