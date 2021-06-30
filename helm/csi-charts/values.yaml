@@ -9,7 +9,7 @@ pspAdmissionControllerEnabled: false
 
 image:
   # -- Docker repository to use for nodes and controller
-  repository: docker.io/seagatecsi/seagate-csi
+  repository: ghcr.io/seagate/seagate-exos-x-csi
   # -- Tag to use for nodes and controller
   # @default -- Uses Chart.appVersion value by default if tag does not specify a new version.
   tag: "latest"

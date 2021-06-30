@@ -20,4 +20,4 @@ maintainers:
 annotations:
   artifacthub.io/images: |
     - name: csi-driver
-      image: docker.io/seagatecsi/seagate-csi
+      image: ghcr.io/seagate/seagate-exos-x-csi
