@@ -1,0 +1,3 @@
+FROM node:15
+ADD testapp.js /testapp.js
+ENTRYPOINT ["node", "testapp.js"]

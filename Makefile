@@ -1,5 +1,5 @@
 ifndef DOCKER_HUB_REPOSITORY
-	DOCKER_HUB_REPOSITORY = docker.io/seagatecsi
+	DOCKER_HUB_REPOSITORY = ghcr.io/seagate
 endif
 
 ifndef VERSION
@@ -9,7 +9,7 @@ else
 endif
 
 ifndef BIN
-	BIN = seagate-csi
+	BIN = seagate-exos-x-csi
 endif
 
 IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
@@ -29,7 +29,7 @@ help:
 	@echo "make push       - push the docker image to '$(DOCKER_HUB_REPOSITORY)'"
 	@echo ""
 
-all:		bin rimage
+all:		bin limage
 .PHONY: all
 
 bin: controller node

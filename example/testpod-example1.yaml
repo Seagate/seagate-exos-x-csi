@@ -16,7 +16,7 @@ metadata:
   name: test-pod
 spec:
   containers:
-  - image: seagatecsi/mksimple
+  - image: ghcr.io/seagate/seagate-exos-x-testapp
     command: ["/bin/sh", "-c", "while sleep 60; do echo hello > /vol/test && ls -l /vol && cat /vol/test && rm /vol/test; done"]
     name: test-pod-container
     volumeMounts:
