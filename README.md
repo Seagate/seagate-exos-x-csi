@@ -29,11 +29,44 @@ This CSI driver is an open-source project under the Apache 2.0 [license](./LICEN
 
 ## Installation
 
-### Uninstall ISCSI tools on your node(s)
+### Install ISCSI tools and Multipath driver on your node(s)
 
-`iscsid` and `multipathd` are now shipped as sidecars on each nodes, it is therefore strongly suggested to uninstall any `open-iscsi` and `multipath-tools` package.
-
-The decision of shipping `iscsid` and `multipathd` as sidecars comes from the desire to simplify the developpement process, as well as improving monitoring. It's essential that versions of those softwares match the candidates versions on your hosts, more about this in the [FAQ](./docs/troubleshooting.md#multipathd-segfault-or-a-volume-got-corrupted). This setup is currently being challenged.
+`iscsid` and `multipathd` must be installed on every node. Check the installation method appropriate for your Linux distribution.
+#### Ubuntu installation procedure
+- Install required packages:
+```
+    sudo apt update && sudo apt install open-iscsi scsitools multipath-tools
+```
+- Install packages for the required filesystem (ext3/ext4/xfs)
+- Update /etc/multipath.conf with the following lines:
+```
+    defaults {
+      polling_interval 2
+      find_multipaths "yes"
+      retain_attached_hw_handler "no"
+      disable_changed_wwids "yes"
+    }
+    devices {
+            device {
+            vendor "HP"
+            product "MSA 2040 SAN"
+            path_grouping_policy group_by_prio
+            getuid_callout "/lib/udev/scsi_id --whitelisted --device=/dev/%n"
+            prio alua
+            path_selector "round-robin 0"
+            path_checker tur
+            hardware_handler "0"
+           failback immediate
+            rr_weight uniform
+            rr_min_io_rq 1
+            no_path_retry 18
+            }
+    }
+```
+- Restart MultipathD
+```
+    service multipath-tools restart
+```
 
 ### Deploy the provisioner to your kubernetes cluster
 
