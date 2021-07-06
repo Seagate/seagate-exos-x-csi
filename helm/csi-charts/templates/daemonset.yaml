@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: seagate-csi-node-server
+  name: seagate-exos-x-csi-node-server
   labels:
     app.kubernetes.io/version: {{ .Chart.Version }}
     app.kubernetes.io/component: dynamic-provisionning-node
@@ -10,16 +10,17 @@ metadata:
 spec:
   selector:
     matchLabels:
-      name: seagate-csi-node-server
+      name: seagate-exos-x-csi-node-server
 {{ include "csidriver.labels" . | indent 6 }}
   template:
     metadata:
       labels:
-        name: seagate-csi-node-server
+        name: seagate-exos-x-csi-node-server
 {{ include "csidriver.labels" . | indent 8 }}
     spec:
       {{ if .Values.pspAdmissionControllerEnabled }}serviceAccount: csi-node-registrar{{ end }}
       hostNetwork: true
+      hostIPC: true
       {{- if .Values.nodeServer.nodeAffinity }}
       affinity:
         nodeAffinity:
@@ -30,26 +31,29 @@ spec:
 {{ toYaml .Values.nodeServer.nodeSelector | indent 8 }}
       {{- end }}
       containers:
-        - name: seagate-csi-node
+        - name: seagate-exos-x-csi-node
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           command:
-            - seagate-csi-node
+            - seagate-exos-x-csi-node
             - -kubeletpath={{ .Values.kubeletPath }}
             - -bind=unix://{{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io/csi.sock
 {{- include "csidriver.extraArgs" .Values.node | indent 10 }}
           securityContext:
             privileged: true
           volumeMounts:
-            - name: device-dir
-              mountPath: /dev
-            - name: iscsi-dir
-              mountPath: /etc/iscsi
-            - name: udev-dir
-              mountPath: /run/udev
             - name: plugin-dir
               mountPath: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
             - name: mountpoint-dir
               mountPath: {{ .Values.kubeletPath }}/pods
+              mountPropagation: Bidirectional
+            - name: san-iscsi-csi-run-dir
+              mountPath: /var/run/systems.csi.seagate.io
+            - name: device-dir
+              mountPath: /dev
+            - name: iscsi-dir
+              mountPath: /etc/iscsi
+            - name: host
+              mountPath: /host
               mountPropagation: Bidirectional
           ports:
           - containerPort: 9808
@@ -83,18 +87,9 @@ spec:
             - name: registration-dir
               mountPath: /registration
       volumes:
-        - name: device-dir
-          hostPath:
-            path: /dev
         - name: registration-dir
           hostPath:
             path: {{ .Values.kubeletPath }}/plugins_registry/
-        - name: iscsi-dir
-          hostPath:
-            path: /etc/iscsi
-        - name: multipath-dir
-          hostPath:
-            path: /etc/multipath
         - name: mountpoint-dir
           hostPath:
             path: {{ .Values.kubeletPath }}/pods
@@ -102,12 +97,18 @@ spec:
           hostPath:
             path: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
             type: DirectoryOrCreate
-        - name: kernel-modules
+        - name: iscsi-dir
           hostPath:
-            path: /lib/modules
-        - name: udev-dir
+            path: /etc/iscsi
+        - name: device-dir
           hostPath:
-            path: /run/udev
+            path: /dev
+        - name: san-iscsi-csi-run-dir
+          hostPath:
+            path: /var/run/systems.csi.seagate.io
+        - name: host
+          hostPath:
+            path: /
         - name: init-node
           configMap:
             name: init-node

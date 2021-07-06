@@ -6,8 +6,8 @@ echo "[] testpod-stop"
 
 banner "Delete Resources"
 
-runCommand "kubectl delete deployment seagate-csi-controller-server"
-runCommand "kubectl delete daemonsets seagate-csi-node-server"
+runCommand "kubectl delete deployment seagate-exos-x-csi-controller-server"
+runCommand "kubectl delete daemonsets seagate-exos-x-csi-node-server"
 runCommand "kubectl delete serviceaccounts csi-provisioner"
 runCommand "kubectl delete configmaps init-node"
 runCommand "kubectl delete clusterrole external-provisioner-runner-systems"
@@ -17,9 +17,14 @@ runCommand "kubectl delete rolebinding csi-provisioner-role-cfg-systems"
 
 runCommand "helm uninstall test-release"
 runCommand "kubectl delete pods test-pod --grace-period=0 --force"
-runCommand "kubectl delete secrets seagate-csi-secrets"
-runCommand "kubectl delete pvc systems-pvc"
+runCommand "kubectl delete secrets seagate-exos-x-csi-secrets"
 runCommand "kubectl delete sc systems-storageclass"
+runCommand "kubectl delete pvc systems-pvc"
+
+pvc=$(kubectl get pv | grep pvc | awk '{print $1}')
+runCommand "kubectl patch pv $pvc -p '{"metadata": {"finalizers": null}}'"
+runCommand "kubectl delete pv $pvc --grace-period=0 --force"
+
 runCommand "kubectl delete pods --all"
 
 banner "Check Resources"

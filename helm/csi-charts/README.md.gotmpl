@@ -26,14 +26,14 @@ Add our Charts repository:
 $ helm repo add seagate https://charts.seagate.io
 ```
 
-Install the {{ template "chart.name" . }} with release name `{{ template "chart.name" . }}` in the `seagate-csi-system` namespace:
+Install the {{ template "chart.name" . }} with release name `{{ template "chart.name" . }}` in the `seagate-exos-x-csi-system` namespace:
 ```
-$ helm install -n seagate-csi-system {{ template "chart.name" . }} seagate/{{ template "chart.name" . }} --values {{ template "chart.name" . }}.values.yaml
+$ helm install -n seagate-exos-x-csi-system {{ template "chart.name" . }} seagate/{{ template "chart.name" . }} --values {{ template "chart.name" . }}.values.yaml
 ```
 
 The `upgrade` command is used to change configuration when values are modified:
 ```
-$ helm upgrade -n seagate-csi-system {{ template "chart.name" . }} seagate/{{ template "chart.name" . }} --values {{ template "chart.name" . }}.values.yaml
+$ helm upgrade -n seagate-exos-x-csi-system {{ template "chart.name" . }} seagate/{{ template "chart.name" . }} --values {{ template "chart.name" . }}.values.yaml
 ```
 
 # Upgrading the Chart

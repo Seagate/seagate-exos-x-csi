@@ -13,12 +13,12 @@ spec:
     targetPort: metrics
     protocol: TCP
   selector:
-    app: seagate-csi-controller-server
+    app: seagate-exos-x-csi-controller-server
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: seagate-csi-controller-exporter
+  name: seagate-exos-x-csi-controller-exporter
   labels:
 {{ include "csidriver.labels" . | indent 4 }}
 spec:
