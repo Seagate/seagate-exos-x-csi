@@ -72,7 +72,7 @@ fi
 #
 # 2) Create secrets for the CSI Driver
 #
-secret=seagate-csi-secrets
+secret=seagate-exos-x-csi-secrets
 
 banner "2) kubectl create -f secret-$system.yaml"
 runCommand "kubectl create -f secret-$system.yaml"

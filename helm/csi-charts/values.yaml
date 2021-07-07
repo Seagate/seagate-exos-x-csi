@@ -61,11 +61,11 @@ csiNodeRegistrar:
   extraArgs: []
 
 controller:
-  # -- Extra arguments for seagate-csi-controller container
+  # -- Extra arguments for seagate-exos-x-csi-controller container
   extraArgs: []
 
 node:
-  # -- Extra arguments for seagate-csi-node containers
+  # -- Extra arguments for seagate-exos-x-csi-node containers
   extraArgs: []
 
 multipathd:
@@ -81,9 +81,9 @@ nodeLivenessProbe:
   extraArgs: []
 
 nodeServer:
-  # -- Kubernetes nodeSelector field for seagate-csi-node-server Pod
+  # -- Kubernetes nodeSelector field for seagate-exos-x-csi-node-server Pod
   nodeSelector:
-  # -- Kubernetes nodeAffinity field for seagate-csi-node-server Pod
+  # -- Kubernetes nodeAffinity field for seagate-exos-x-csi-node-server Pod
   nodeAffinity:
 
 podMonitor:

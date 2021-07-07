@@ -1,7 +1,7 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: seagate-csi-controller-server
+  name: seagate-exos-x-csi-controller-server
   labels:
     app.kubernetes.io/version: {{ .Chart.Version }}
     app.kubernetes.io/component: dynamic-provisionning-controller
@@ -13,20 +13,20 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: seagate-csi-controller-server
+      app: seagate-exos-x-csi-controller-server
 {{ include "csidriver.labels" . | indent 6 }}
   template:
     metadata:
       labels:
-        app: seagate-csi-controller-server
+        app: seagate-exos-x-csi-controller-server
 {{ include "csidriver.labels" . | indent 8 }}
     spec:
       serviceAccount: csi-provisioner
       containers:
-        - name: seagate-csi-controller
+        - name: seagate-exos-x-csi-controller
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           command:
-            - seagate-csi-controller
+            - seagate-exos-x-csi-controller
             - -bind=unix:///csi/csi.sock
 {{- include "csidriver.extraArgs" .Values.controller | indent 10 }}
           volumeMounts:

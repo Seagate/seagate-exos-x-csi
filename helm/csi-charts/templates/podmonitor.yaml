@@ -2,13 +2,13 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: seagate-csi-node-exporter
+  name: seagate-exos-x-csi-node-exporter
   labels:
 {{ include "csidriver.labels" . | indent 4 }}
 spec:
   selector:
     matchLabels:
-      name: seagate-csi-node-server
+      name: seagate-exos-x-csi-node-server
   podMetricsEndpoints:
   - port: metrics
 {{- end }}
