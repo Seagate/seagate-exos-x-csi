@@ -33,11 +33,15 @@ This CSI driver is an open-source project under the Apache 2.0 [license](./LICEN
 
 `iscsid` and `multipathd` must be installed on every node. Check the installation method appropriate for your Linux distribution.
 #### Ubuntu installation procedure
+- Remove any containers that were running a prior CSI Driver version.
 - Install required packages:
 ```
-    sudo apt update && sudo apt install open-iscsi scsitools multipath-tools
+    sudo apt update && sudo apt install open-iscsi scsitools multipath-tools -y
 ```
-- Install packages for the required filesystem (ext3/ext4/xfs)
+- Determine if any packages are required for your filesystem (ext3/ext4/xfs) choice and view current support:
+```
+cat /proc/filesystems
+```
 - Update /etc/multipath.conf with the following lines:
 ```
     defaults {

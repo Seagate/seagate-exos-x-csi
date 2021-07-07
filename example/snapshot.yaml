@@ -30,18 +30,18 @@ spec:
 apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshotClass
 metadata:
-  name: snapshot-class-seagate-csi
+  name: snapshot-class-seagate-exos-x-csi
 driver: systems.csi.seagate.io
 deletionPolicy: Delete
 parameters:
   csi.storage.k8s.io/snapshotter-secret-name: snapshotter-secrets
-  csi.storage.k8s.io/snapshotter-secret-namespace: seagate-csi-system
+  csi.storage.k8s.io/snapshotter-secret-namespace: seagate-exos-x-csi-system
 ---
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
 metadata:
   name: test-snapshot
 spec:
-  volumeSnapshotClassName: snapshot-class-seagate-csi
+  volumeSnapshotClassName: snapshot-class-seagate-exos-x-csi
   source:
     persistentVolumeClaimName: claim

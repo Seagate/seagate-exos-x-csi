@@ -35,9 +35,9 @@ RUN apt update \
  && apt install -y dosfstools e2fsprogs xfsprogs jfsutils libisns0 open-iscsi kmod multipath-tools \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /seagate-csi-* /usr/local/bin/
+COPY --from=build /seagate-exos-x-csi-* /usr/local/bin/
 
-CMD [ "/usr/local/bin/seagate-csi-controller" ]
+CMD [ "/usr/local/bin/seagate-exos-x-csi-controller" ]
 
 ARG version
 ARG vcs_ref

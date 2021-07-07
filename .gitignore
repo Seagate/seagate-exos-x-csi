@@ -8,8 +8,8 @@ test/.env
 _legacy
 
 # binaries
-seagate-csi-node
-seagate-csi-controller
+seagate-exos-x-csi-node
+seagate-exos-x-csi-controller
 
 # generated documentation
 /helm/*/README.md

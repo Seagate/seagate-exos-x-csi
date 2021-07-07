@@ -105,7 +105,7 @@ rules:
   resources: ["podsecuritypolicies"]
   verbs:     ["use"]
   resourceNames:
-  - seagate-csi
+  - seagate-exos-x-csi
 {{ end }}
 
 ---

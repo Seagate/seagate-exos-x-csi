@@ -2,7 +2,7 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: seagate-csi
+  name: seagate-exos-x-csi
 spec:
   privileged: true
   hostNetwork: true
