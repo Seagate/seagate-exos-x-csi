@@ -31,7 +31,7 @@ apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshotClass
 metadata:
   name: snapshot-class-seagate-exos-x-csi
-driver: systems.csi.seagate.io
+driver: csi-exos-x.seagate.com
 deletionPolicy: Delete
 parameters:
   csi.storage.k8s.io/snapshotter-secret-name: snapshotter-secrets

@@ -19,7 +19,7 @@ func getVolumeMapsHostNames(client *storageapi.Client, name string) ([]string, *
 	if name != "" {
 		name = fmt.Sprintf("\"%s\"", name)
 	}
-	res, status, err := client.Request(fmt.Sprintf("/show/volume-maps/%s", name))
+	res, status, err := client.FormattedRequest("/show/volume-maps/%s", name)
 	if err != nil {
 		return []string{}, status, err
 	}

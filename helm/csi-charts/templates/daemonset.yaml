@@ -36,18 +36,18 @@ spec:
           command:
             - seagate-exos-x-csi-node
             - -kubeletpath={{ .Values.kubeletPath }}
-            - -bind=unix://{{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io/csi.sock
+            - -bind=unix://{{ .Values.kubeletPath }}/plugins/csi-exos-x.seagate.com/csi.sock
 {{- include "csidriver.extraArgs" .Values.node | indent 10 }}
           securityContext:
             privileged: true
           volumeMounts:
             - name: plugin-dir
-              mountPath: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
+              mountPath: {{ .Values.kubeletPath }}/plugins/csi-exos-x.seagate.com
             - name: mountpoint-dir
               mountPath: {{ .Values.kubeletPath }}/pods
               mountPropagation: Bidirectional
             - name: san-iscsi-csi-run-dir
-              mountPath: /var/run/systems.csi.seagate.io
+              mountPath: /var/run/csi-exos-x.seagate.com
             - name: device-dir
               mountPath: /dev
             - name: iscsi-dir
@@ -79,7 +79,7 @@ spec:
           image: {{ .Values.csiNodeRegistrar.image.repository }}:{{ .Values.csiNodeRegistrar.image.tag }}
           args:
             - --csi-address=/csi/csi.sock
-            - --kubelet-registration-path={{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io/csi.sock
+            - --kubelet-registration-path={{ .Values.kubeletPath }}/plugins/csi-exos-x.seagate.com/csi.sock
 {{- include "csidriver.extraArgs" .Values.csiNodeRegistrar | indent 10 }}
           volumeMounts:
             - name: plugin-dir
@@ -95,7 +95,7 @@ spec:
             path: {{ .Values.kubeletPath }}/pods
         - name: plugin-dir
           hostPath:
-            path: {{ .Values.kubeletPath }}/plugins/systems.csi.seagate.io
+            path: {{ .Values.kubeletPath }}/plugins/csi-exos-x.seagate.com
             type: DirectoryOrCreate
         - name: iscsi-dir
           hostPath:
@@ -105,7 +105,7 @@ spec:
             path: /dev
         - name: san-iscsi-csi-run-dir
           hostPath:
-            path: /var/run/systems.csi.seagate.io
+            path: /var/run/csi-exos-x.seagate.com
         - name: host
           hostPath:
             path: /

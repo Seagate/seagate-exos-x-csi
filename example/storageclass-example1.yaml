@@ -1,6 +1,6 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
-provisioner: systems.csi.seagate.io # Check pkg/driver.go, Required for the plugin to recognize this storage class as handled by itself.
+provisioner: csi-exos-x.seagate.com # Check pkg/driver.go, Required for the plugin to recognize this storage class as handled by itself.
 volumeBindingMode: WaitForFirstConsumer # Prefer this value to avoid unschedulable pods (https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
 allowVolumeExpansion: true
 metadata:

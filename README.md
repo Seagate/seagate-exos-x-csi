@@ -54,14 +54,14 @@ cat /proc/filesystems
             device {
             vendor "HP"
             product "MSA 2040 SAN"
-            path_grouping_policy group_by_prio
+            path_grouping_policy "group_by_prio"
             getuid_callout "/lib/udev/scsi_id --whitelisted --device=/dev/%n"
-            prio alua
+            prio "alua"
             path_selector "round-robin 0"
-            path_checker tur
+            path_checker "tur"
             hardware_handler "0"
-           failback immediate
-            rr_weight uniform
+            failback "immediate"
+            rr_weight "uniform"
             rr_min_io_rq 1
             no_path_retry 18
             }

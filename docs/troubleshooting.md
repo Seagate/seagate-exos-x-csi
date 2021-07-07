@@ -14,7 +14,7 @@ iscsiadm -m discovery -t st -p 10.14.84.215
 iscsiadm -m node -L all
 ```
 
-## AttachVolume.Attach failed for volume "xxx" : CSINode xxx does not contain driver systems.csi.seagate.io
+## AttachVolume.Attach failed for volume "xxx" : CSINode xxx does not contain driver csi-exos-x.seagate.com
 
 Typically, this error happens when you use RancherOS. Since the kubelet path is `/opt/rke/var/lib/kubelet` instead of `/var/lib/kubelet`, the plugin cannot be registered using the default path.
 
