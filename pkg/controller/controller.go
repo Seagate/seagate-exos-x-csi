@@ -220,15 +220,14 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	}
 
 	klog.Infof("using API at address (%s)", apiAddr)
-	if controller.client.Addr == apiAddr && controller.client.Username == username {
-		klog.Info("client is already configured for this API, skipping login")
+	if controller.client.SessionValid(apiAddr, username) {
 		return nil
 	}
 
 	controller.client.Username = username
 	controller.client.Password = password
 	controller.client.Addr = apiAddr
-	klog.Infof("login into %q as user %q", controller.client.Addr, controller.client.Username)
+	klog.Infof("login to API address %q as user %q", controller.client.Addr, controller.client.Username)
 	err := controller.client.Login()
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
