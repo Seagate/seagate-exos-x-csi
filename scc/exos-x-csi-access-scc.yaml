@@ -1,0 +1,34 @@
+kind: SecurityContextConstraints
+apiVersion: security.openshift.io/v1
+metadata:
+  annotations:
+    kubernetes.io/description: allow hostpath and host network to be accessible.
+  generation: 1
+  name: exos-x-csi-access
+  selfLink: /apis/security.openshift.io/v1/securitycontextconstraints/exos-x-csi-access
+allowHostDirVolumePlugin: true
+allowHostIPC: true
+allowHostNetwork: true
+allowHostPID: false
+allowHostPorts: true
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: true
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+- KILL
+- MKNOD
+- SETUID
+- SETGID
+allowedCapabilities:
+- SYS_ADMIN
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes:
+- '*'

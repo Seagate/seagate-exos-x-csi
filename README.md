@@ -76,6 +76,12 @@ cat /proc/filesystems
 
 The preferred installation approach is to use the provided `Helm Charts` under the helm folder.
 
+#### To deploy the provisioner to OpenShift cluster, run the following commands prior to using Helm:
+```
+    oc create -f scc/exos-x-csi-access-scc.yaml --as system:admin
+    oc adm policy add-scc-to-user exos-x-csi-access -z default -n NAMESPACE
+```
+
 #### Configure your release
 
 - Update `helm/csi-charts/values.yaml` to match your configuration settings.
