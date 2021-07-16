@@ -17,3 +17,4 @@ parameters:
   iqn: <iqn> # Example Appliance IQN
   pool: A # Pool to use on the IQN to provision volumes
   portals: <ipaddress-a1>,<ipaddress-b1> # Comma separated list of portal ips. Ports A1, B1
+  volPrefix: csi # Desired prefix for volume naming, an underscore is appended

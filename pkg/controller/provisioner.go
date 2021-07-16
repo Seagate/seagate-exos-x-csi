@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -36,23 +35,21 @@ func (controller *Controller) checkVolumeExists(volumeID string, size int64) (bo
 
 // CreateVolume creates a new volume from the given request. The function is idempotent.
 func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	if req.GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "cannot create volume with empty name")
+
+	volumeID, err := common.TranslateVolumeName(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if common.ValidateVolumeName(volumeID) == false {
+		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
 	}
 
 	size := req.GetCapacityRange().GetRequiredBytes()
 	sizeStr := getSizeStr(size)
 	parameters := req.GetParameters()
-	klog.Infof("received %s volume request\n", sizeStr)
 
-	volumeID := req.GetName()
-	if len(volumeID) > common.VolumeNameMaxLength {
-		volumeID = volumeID[4:]
-		volumeID = strings.ReplaceAll(volumeID, "-", "")
-		volumeID = volumeID[:common.VolumeNameMaxLength]
-	}
-
-	klog.Infof("creating volume %s (size %s) in pool %s", volumeID, sizeStr, parameters[common.PoolConfigKey])
+	klog.Infof("creating volume %q (size %s) in pool %q", volumeID, sizeStr, parameters[common.PoolConfigKey])
 
 	volumeExists, err := controller.checkVolumeExists(volumeID, size)
 	if err != nil {
@@ -64,10 +61,12 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 		if volume := req.VolumeContentSource.GetVolume(); volume != nil {
 			sourceID = volume.VolumeId
+			klog.Infof("-- GetVolume sourceID %q", sourceID)
 		}
 
 		if snapshot := req.VolumeContentSource.GetSnapshot(); sourceID == "" && snapshot != nil {
 			sourceID = snapshot.SnapshotId
+			klog.Infof("-- GetSnapshot sourceID %q", sourceID)
 		}
 
 		if sourceID != "" {
