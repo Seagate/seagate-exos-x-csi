@@ -30,9 +30,11 @@ const (
 	UsernameSecretKey         = "username"
 	PasswordSecretKey         = "password"
 	StorageClassAnnotationKey = "storageClass"
+	VolumePrefixKey           = "volPrefix"
 
-	MaximumLUN          = 255
-	VolumeNameMaxLength = 32
+	MaximumLUN            = 255
+	VolumeNameMaxLength   = 32
+	VolumePrefixMaxLength = 3
 )
 
 // Driver contains main resources needed by the driver and references the underlying specific driver

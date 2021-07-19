@@ -9,6 +9,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/kubernetes-csi/csi-test v0.0.0-20191016154743-6931aedb3df0
+	github.com/onsi/gomega v1.10.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a

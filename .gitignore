@@ -13,3 +13,6 @@ seagate-exos-x-csi-controller
 
 # generated documentation
 /helm/*/README.md
+
+# vs code
+.vscode/
