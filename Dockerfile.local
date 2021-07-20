@@ -33,6 +33,7 @@ COPY /seagate-exos-x-csi-controller /usr/local/bin/
 COPY /seagate-exos-x-csi-node /usr/local/bin/
 RUN ls -l /usr/local/bin/
 RUN ls -l /usr/local/bin/seagate-exos-x-csi-controller
+ENV PATH="${PATH}:/lib/udev"
 
 CMD [ "/usr/local/bin/seagate-exos-x-csi-controller" ]
 

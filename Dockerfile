@@ -30,12 +30,9 @@ LABEL org.opencontainers.image.title="Seagate Exos X CSI" \
       org.opencontainers.image.documentation="https://github.com/Seagate/seagate-exos-x-csi/blob/master/README.md" \
       org.opencontainers.image.licenses="Apache 2.0"
 
-RUN apt update \
- && apt dist-upgrade -y \
- && apt install -y dosfstools e2fsprogs xfsprogs jfsutils libisns0 open-iscsi kmod multipath-tools \
- && rm -rf /var/lib/apt/lists/*
-
 COPY --from=build /seagate-exos-x-csi-* /usr/local/bin/
+
+ENV PATH="${PATH}:/lib/udev"
 
 CMD [ "/usr/local/bin/seagate-exos-x-csi-controller" ]
 

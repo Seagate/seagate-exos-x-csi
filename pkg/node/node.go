@@ -14,6 +14,7 @@ import (
 	"github.com/Seagate/csi-lib-iscsi/iscsi"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
@@ -26,20 +27,51 @@ import (
 type Node struct {
 	*common.Driver
 
-	semaphore   *semaphore.Weighted
-	kubeletPath string
+	semaphore *semaphore.Weighted
+	runPath   string
 }
 
 // New is a convenience function for creating a node driver
-func New(kubeletPath string) *Node {
+func New() *Node {
 	if klog.V(8) {
 		iscsi.EnableDebugLogging(os.Stderr)
 	}
 
 	node := &Node{
-		Driver:      common.NewDriver(),
-		semaphore:   semaphore.NewWeighted(1),
-		kubeletPath: kubeletPath,
+		Driver:    common.NewDriver(),
+		semaphore: semaphore.NewWeighted(1),
+		runPath:   fmt.Sprintf("/var/run/%s", common.PluginName),
+	}
+
+	if err := os.MkdirAll(node.runPath, 0755); err != nil {
+		panic(err)
+	}
+
+	klog.Infof("Node initializing with path: %s", node.runPath)
+
+	requiredBinaries := []string{
+		"blkid",      // command-line utility to locate/print block device attributes
+		"blockdev",   // call block device ioctls from the command line
+		"findmnt",    // find a filesystem
+		"iscsiadm",   // iscsi administration
+		"lsblk",      // list block devices
+		"mount",      // mount a filesystem
+		"mountpoint", // see if a directory or file is a mountpoint
+		"multipath",  // device mapping multipathing
+		"multipathd", // device mapping multipathing
+		"scsi_id",    // retrieve and generate a unique SCSI identifier
+		"umount",     // unmount file systems
+		//		"e2fsck",     // check a Linux ext2/ext3/ext4 file system
+		//		"mkfs.ext4",  // create an ext2/ext3/ext4 filesystem
+		//		"resize2fs",  // ext2/ext3/ext4 file system resizer
+	}
+
+	klog.Infof("Checking (%d) binaries", len(requiredBinaries))
+
+	for _, binaryName := range requiredBinaries {
+		if err := checkHostBinary(binaryName); err != nil {
+			klog.Warningf("Error locating binary %q", binaryName)
+		}
 	}
 
 	node.InitServer(
@@ -151,14 +183,27 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	}
 
 	if err = checkFs(path); err != nil {
-		return nil, status.Errorf(codes.DataLoss, "Filesystem seems to be corrupted: %v", err)
+		return nil, status.Errorf(codes.DataLoss, "filesystem seems to be corrupted: %v", err)
 	}
 
-	klog.Infof("mounting volume at %s", req.GetTargetPath())
-	os.Mkdir(req.GetTargetPath(), 00755)
-	out, err := exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
-	if err != nil {
-		return nil, status.Error(codes.Internal, string(out))
+	out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
+	mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
+	if err != nil || len(mountpoints) == 0 {
+		klog.Infof("mounting volume at %s", req.GetTargetPath())
+		os.Mkdir(req.GetTargetPath(), 00755)
+		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
+		if err != nil {
+			return nil, status.Error(codes.Internal, string(out))
+		}
+	} else if len(mountpoints) == 1 {
+		if mountpoints[0] == req.GetTargetPath() {
+			klog.Infof("volume %s already mounted", req.GetTargetPath())
+		} else {
+			errStr := fmt.Sprintf("device has already been mounted somewhere else (%s instead of %s), please unmount first", mountpoints[0], req.GetTargetPath())
+			return nil, status.Error(codes.Internal, errStr)
+		}
+	} else if len(mountpoints) > 1 {
+		return nil, errors.New("device has already been mounted in several locations, please unmount first")
 	}
 
 	iscsiInfoPath := node.getIscsiInfoPath(req.GetVolumeId())
@@ -189,22 +234,30 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 		out, err := exec.Command("mountpoint", req.GetTargetPath()).CombinedOutput()
 		if err == nil {
 			out, err := exec.Command("umount", req.GetTargetPath()).CombinedOutput()
-			if err != nil && !os.IsNotExist(err) {
+			if err != nil {
 				return nil, status.Error(codes.Internal, string(out))
 			}
 		} else {
 			klog.Warningf("assuming that volume is already unmounted: %s", out)
 		}
 
-		os.Remove(req.GetTargetPath())
+		err = os.Remove(req.GetTargetPath())
+		if err != nil && !os.IsNotExist(err) {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else {
+		klog.Warningf("assuming that volume is already unmounted: %v", err)
 	}
 
 	iscsiInfoPath := node.getIscsiInfoPath(req.GetVolumeId())
 	klog.Infof("loading ISCSI connection info from %s", iscsiInfoPath)
 	connector, err := iscsi.GetConnectorFromFile(iscsiInfoPath)
 	if err != nil {
-		klog.Warning(errors.Wrap(err, "assuming that ISCSI connection is already closed"))
-		return &csi.NodeUnpublishVolumeResponse{}, nil
+		if os.IsNotExist(err) {
+			klog.Warning(errors.Wrap(err, "assuming that ISCSI connection is already closed"))
+			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if isVolumeInUse(connector.MountTargetDevice.GetPath()) {
@@ -288,31 +341,24 @@ func (node *Node) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVol
 
 // Probe returns the health and readiness of the plugin
 func (node *Node) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	if !isKernelModLoaded("iscsi_tcp") {
-		return nil, status.Error(codes.FailedPrecondition, "kernel mod iscsi_tcp is not loaded")
-	}
-	if !isKernelModLoaded("dm_multipath") {
-		return nil, status.Error(codes.FailedPrecondition, "kernel mod dm_multipath is not loaded")
-	}
-
-	return &csi.ProbeResponse{}, nil
+	klog.V(4).Infof("Probe called with args: %#v", req)
+	return &csi.ProbeResponse{Ready: &wrappers.BoolValue{Value: true}}, nil
 }
 
 func (node *Node) getIscsiInfoPath(volumeID string) string {
-	return fmt.Sprintf("%s/plugins/%s/iscsi-%s.json", node.kubeletPath, common.PluginName, volumeID)
+	return fmt.Sprintf("%s/iscsi-%s.json", node.runPath, volumeID)
 }
 
-func isKernelModLoaded(modName string) bool {
-	klog.V(5).Infof("verifiying that %q kernel mod is loaded", modName)
-	err := exec.Command("grep", "^"+modName, "/proc/modules", "-q").Run()
+func checkHostBinary(name string) error {
+	klog.V(5).Infof("checking that binary %q exists in host PATH", name)
 
-	if err != nil {
-		return false
+	if path, err := exec.LookPath(name); err != nil {
+		return fmt.Errorf("binary %q not found", name)
+	} else {
+		klog.V(5).Infof("found binary %q in host PATH at %q", name, path)
 	}
 
-	klog.V(5).Infof("kernel mod %q is loaded", modName)
-
-	return true
+	return nil
 }
 
 func checkFs(path string) error {

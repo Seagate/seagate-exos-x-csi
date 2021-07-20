@@ -18,9 +18,9 @@ spec:
         name: seagate-exos-x-csi-node-server
 {{ include "csidriver.labels" . | indent 8 }}
     spec:
-      {{ if .Values.pspAdmissionControllerEnabled }}serviceAccount: csi-node-registrar{{ end }}
       hostNetwork: true
       hostIPC: true
+      {{ if .Values.pspAdmissionControllerEnabled }}serviceAccount: csi-node-registrar{{ end }}
       {{- if .Values.nodeServer.nodeAffinity }}
       affinity:
         nodeAffinity:
@@ -35,8 +35,8 @@ spec:
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           command:
             - seagate-exos-x-csi-node
-            - -kubeletpath={{ .Values.kubeletPath }}
             - -bind=unix://{{ .Values.kubeletPath }}/plugins/csi-exos-x.seagate.com/csi.sock
+            - -chroot=/host
 {{- include "csidriver.extraArgs" .Values.node | indent 10 }}
           securityContext:
             privileged: true
@@ -109,7 +109,3 @@ spec:
         - name: host
           hostPath:
             path: /
-        - name: init-node
-          configMap:
-            name: init-node
-            defaultMode: 0700
