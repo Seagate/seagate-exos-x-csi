@@ -14,6 +14,7 @@ import (
 	"github.com/Seagate/csi-lib-iscsi/iscsi"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
@@ -44,6 +45,33 @@ func New() *Node {
 
 	if err := os.MkdirAll(node.runPath, 0755); err != nil {
 		panic(err)
+	}
+
+	klog.Infof("Node initializing with path: %s", node.runPath)
+
+	requiredBinaries := []string{
+		"blkid",      // command-line utility to locate/print block device attributes
+		"blockdev",   // call block device ioctls from the command line
+		"findmnt",    // find a filesystem
+		"iscsiadm",   // iscsi administration
+		"lsblk",      // list block devices
+		"mount",      // mount a filesystem
+		"mountpoint", // see if a directory or file is a mountpoint
+		"multipath",  // device mapping multipathing
+		"multipathd", // device mapping multipathing
+		"scsi_id",    // retrieve and generate a unique SCSI identifier
+		"umount",     // unmount file systems
+		//		"e2fsck",     // check a Linux ext2/ext3/ext4 file system
+		//		"mkfs.ext4",  // create an ext2/ext3/ext4 filesystem
+		//		"resize2fs",  // ext2/ext3/ext4 file system resizer
+	}
+
+	klog.Infof("Checking (%d) binaries", len(requiredBinaries))
+
+	for _, binaryName := range requiredBinaries {
+		if err := checkHostBinary(binaryName); err != nil {
+			klog.Warningf("Error locating binary %q", binaryName)
+		}
 	}
 
 	node.InitServer(
@@ -313,30 +341,8 @@ func (node *Node) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVol
 
 // Probe returns the health and readiness of the plugin
 func (node *Node) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	requiredBinaries := []string{
-		"scsi_id",
-		"iscsiadm",
-		"multipath",
-		"multipathd",
-		"lsblk",
-		"blockdev",
-		"findmnt",
-		"mount",
-		"umount",
-		"mountpoint",
-		"resize2fs",
-		"e2fsck",
-		"blkid",
-		"mkfs.ext4",
-	}
-
-	for _, binaryName := range requiredBinaries {
-		if err := checkHostBinary(binaryName); err != nil {
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		}
-	}
-
-	return &csi.ProbeResponse{}, nil
+	klog.V(4).Infof("Probe called with args: %#v", req)
+	return &csi.ProbeResponse{Ready: &wrappers.BoolValue{Value: true}}, nil
 }
 
 func (node *Node) getIscsiInfoPath(volumeID string) string {

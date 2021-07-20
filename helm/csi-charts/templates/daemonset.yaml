@@ -109,7 +109,3 @@ spec:
         - name: host
           hostPath:
             path: /
-        - name: init-node
-          configMap:
-            name: init-node
-            defaultMode: 0700

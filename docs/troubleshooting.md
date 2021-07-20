@@ -18,7 +18,7 @@ iscsiadm -m node -L all
 
 Typically, this error happens when you use RancherOS. Since the kubelet path is `/opt/rke/var/lib/kubelet` instead of `/var/lib/kubelet`, the plugin cannot be registered using the default path.
 
-In order to fix this issue, paste the following line in your `value.yaml` and upgrade your helm release.
+In order to fix this issue, replace the current line with the following line in `helm/csi-charts/values.yaml` and reinstall your helm charts.
 
 ```yaml
 kubeletPath: /opt/rke/var/lib/kubelet
