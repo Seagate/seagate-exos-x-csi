@@ -1,31 +1,29 @@
 # Seagate CSI dynamic provisioner for Kubernetes
 
-A dynamic persistent volume (PV) provisioner for Seagate based storage systems.
+Seagate Exos X CSI driver supports Seagate storage systems with 4xx5/5xx5 controllers (including OEM versions)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seagate/seagate-exos-x-csi)](https://goreportcard.com/report/github.com/Seagate/seagate-exos-x-csi)
 
 ## Introduction
 
+Seagate Exos X CSI Driver helps users of storage systems with 4xx5/5xx5 controllers from Seagate and OEM vendors efficiently manage their storage within container platforms that support the CSI standard.
 Dealing with persistent storage on Kubernetes can be particularly cumbersome, especially when dealing with on-premises installations, or when the cloud-provider persistent storage solutions are not applicable.
+The Seagate CSI Driver is a direct result of customer demand to bring the ease of use of Seagate Exos X to DevOps practices, and demonstrates Seagate’s continued commitment to the Kubernetes ecosystem
 
-Entry-level SAN appliances usually propose a low-cost, still powerful, solution to enable redundant persistent storage, with the flexibility of attaching it to any host on your network.
-
-Seagate continues to maintain the line-up with subsequent series :
-- [Seagate AssuredSAN](https://www.seagate.com/fr/fr/support/dothill-san/assuredsan-pro-5000-series/) 3000/4000/5000/6000 series
+More information about Seagate Data Storage Systems can be found [online](https://www.seagate.com/products/storage/data-storage-systems/)
 
 ## This project
 
 This project implements the **Container Storage Interface** in order to facilitate dynamic provisioning of persistent volumes on a Kubernetes cluster.
 
-All Exos X based equipements share a common API.
-
 This CSI driver is an open-source project under the Apache 2.0 [license](./LICENSE).
 
-## Features
-- dynamic provisioning
-- resize
-- snapshot
-- prometheus metrics
+## Key Features
+- Manage persistent volumes backed by iSCSI protocols on Exos X enclosures
+- Control multiple Exos X systems within a single Kubernetes cluster
+- Manage Exos X snapshots and clones, including restoring from snapshots
+- Clone, extend and manage persistent volumes created outside of the Exos CSI Driver
+- Collect usage and performance metrics for CSI driver usage and expose them via an open-source systems monitoring and alerting toolkit, such as Prometheus
 
 ## Installation
 
@@ -75,6 +73,10 @@ cat /proc/filesystems
 ### Deploy the provisioner to your kubernetes cluster
 
 The preferred installation approach is to use the provided `Helm Charts` under the helm folder.
+```
+  helm install seagate-csi -n seagate --create-namespace \
+    helm/csi-charts -f helm/csi-charts/values.yaml
+```
 
 #### To deploy the provisioner to OpenShift cluster, run the following commands prior to using Helm:
 ```
@@ -89,19 +91,6 @@ The preferred installation approach is to use the provided `Helm Charts` under t
 - Update `example/storageclass-example1.yaml` with your storage controller values.
 - Update `example/testpod-example1.yaml` with any of you new values.
 
-#### Run the Installation Script
-
-```sh
-cd example
-./testpod-start.sh example1
-```
-
-This script will install the local helm charts, create secrets, create the storage class, and then create a test pod. To clean up after a run.
-
-```sh
-cd example
-./testpod-stop.sh
-```
 
 ## Documentation
 
