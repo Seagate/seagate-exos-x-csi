@@ -26,6 +26,7 @@ help:
 	@echo "make test       - build test/sanity"
 	@echo "make image      - create a repo docker image ($(IMAGE))"
 	@echo "make limage     - create a local docker image ($(IMAGE))"
+	@echo "make ubi        - create a local docker image using Redhat UBI ($(IMAGE))"
 	@echo "make push       - push the docker image to '$(DOCKER_HUB_REPOSITORY)'"
 	@echo ""
 
@@ -54,6 +55,10 @@ image:
 
 limage:
 	docker build -f Dockerfile.local -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
+.PHONY: limage
+
+ubi:
+	docker build -f Dockerfile.ubi -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
 .PHONY: limage
 
 push:

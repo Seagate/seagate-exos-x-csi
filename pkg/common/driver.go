@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -106,6 +107,9 @@ func NewLogRoutineServerInterceptor(shouldLogRoutine func(string) bool) grpc.Una
 // Start does the boilerplate stuff for starting the driver
 // it loads its configuration from cli flags
 func (driver *Driver) Start(bind string) {
+
+	klog.Infof("starting driver on %s (%s)\n\n", runtime.GOOS, runtime.GOARCH)
+
 	parts := strings.Split(bind, "://")
 	if len(parts) < 2 {
 		klog.Fatal("please specify a protocol in your bind URI (e.g. \"tcp://\")")
