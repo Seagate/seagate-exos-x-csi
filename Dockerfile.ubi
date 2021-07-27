@@ -1,0 +1,21 @@
+FROM redhat/ubi8
+
+RUN yum update -y
+RUN yum install iscsi-initiator-utils -y
+RUN yum install kmod -y
+
+
+COPY /seagate-exos-x-csi-controller /usr/local/bin/
+COPY /seagate-exos-x-csi-node /usr/local/bin/
+RUN ls -l /usr/local/bin/
+RUN ls -l /usr/local/bin/seagate-exos-x-csi-controller
+ENV PATH="${PATH}:/lib/udev"
+
+CMD [ "/usr/local/bin/seagate-exos-x-csi-controller" ]
+
+# ARG version
+# ARG vcs_ref
+# ARG build_date
+# LABEL org.opencontainers.image.version="$version" \
+#       org.opencontainers.image.revision="$vcs_ref" \
+#       org.opencontainers.image.created="$build_date"
