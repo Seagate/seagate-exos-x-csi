@@ -31,13 +31,18 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	initiatorName := req.GetNodeId()
 	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, req.GetVolumeId())
 
-	hostNames, _, err := driver.client.GetVolumeMaps(req.GetVolumeId())
+	maps, luns, _, err := driver.client.GetVolumeMaps(req.GetVolumeId())
+	klog.Infof("maps = %v", maps)
+
 	if err != nil {
 		return nil, err
 	}
-	for _, hostName := range hostNames {
-		if hostName != initiatorName {
-			return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already attached to another node", req.GetVolumeId())
+	for i, hostName := range maps {
+		if hostName == initiatorName {
+			klog.Infof("volume %s is already mapped to (%s) [%s]", req.GetVolumeId(), initiatorName, luns[i])
+			return &csi.ControllerPublishVolumeResponse{
+				PublishContext: map[string]string{"lun": luns[i]},
+			}, nil
 		}
 	}
 
