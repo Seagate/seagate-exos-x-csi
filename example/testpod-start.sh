@@ -2,15 +2,14 @@
 
 source common.sh
 
-echo "[] testpod-start ($1)"
-
-helmpath=../helm/csi-charts/
+helmpath=/home/seagate/github.com/Seagate/seagate-exos-x-csi/helm/csi-charts/
 
 if [ -z ${1+x} ]; then
     echo ""
-    echo "Usage: testpod-start [id]";
+    echo "Usage: testpod-start [id] [step]";
     echo "Where:"
-    echo "   [id] - specifies a string used to install and run a particular test pod configuration."
+    echo "   [id]   - specifies a string used to install and run a particular test pod configuration."
+    echo "   [step] - specifies max step (1,2,3,4) and defaults to 4 (run all steps) and step 1 will always run"
     echo ""
     echo "Example: 'testpod-start system1'"
     echo "   1) helm install test-release $helmpath -f $helmpath/values.yaml"
@@ -22,6 +21,14 @@ if [ -z ${1+x} ]; then
 else
     system=$1
 fi
+
+if [ -z "$2" ]; then
+    maxstep=4
+else
+    maxstep=$2
+fi
+
+echo "[] testpod-start ($system) [$maxstep]"
 
 #
 # 1) Run helm install using local charts
@@ -65,7 +72,7 @@ do
     ((counter++))
 done
 
-if [[ "$success" -eq 0 ]]; then
+if [ "$success" -eq 0 ] || [ "$maxstep" -lt 2 ]; then
     exit
 fi
 
@@ -85,6 +92,10 @@ if [[ "$?" -ne 0 ]]; then
     exit
 fi
 
+if [ "$maxstep" -lt 3 ]; then
+    exit
+fi
+
 #
 # 3) Create the Storage Class
 #
@@ -98,6 +109,10 @@ if [[ "$?" -eq 1 ]]; then
     echo ""
     echo "ERROR: StorageClass ($storageclass) was NOT created successfully."
     echo ""
+    exit
+fi
+
+if [ "$maxstep" -lt 4 ]; then
     exit
 fi
 

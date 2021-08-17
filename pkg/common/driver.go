@@ -108,7 +108,16 @@ func NewLogRoutineServerInterceptor(shouldLogRoutine func(string) bool) grpc.Una
 // it loads its configuration from cli flags
 func (driver *Driver) Start(bind string) {
 
-	klog.Infof("starting driver on %s (%s)\n\n", runtime.GOOS, runtime.GOARCH)
+	var ll klog.Level = 0
+	for i := 0; i < 10; i++ {
+		if klog.V(klog.Level(i)) {
+			ll = klog.Level(i)
+		} else {
+			break
+		}
+	}
+
+	klog.Infof("starting driver on %s (%s) [level %d]\n\n", runtime.GOOS, runtime.GOARCH, ll)
 
 	parts := strings.Split(bind, "://")
 	if len(parts) < 2 {

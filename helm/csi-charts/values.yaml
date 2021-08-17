@@ -20,7 +20,7 @@ image:
 csiProvisioner:
   image:
     repository: k8s.gcr.io/sig-storage/csi-provisioner
-    tag: v2.1.0
+    tag: v2.2.2
   # -- Timeout for gRPC calls from the csi-provisioner to the controller
   timeout: 30s
   # -- Extra arguments for csi-provisioner controller sidecar
@@ -30,7 +30,7 @@ csiProvisioner:
 csiAttacher:
   image:
     repository: k8s.gcr.io/sig-storage/csi-attacher
-    tag: v2.2.1
+    tag: v3.2.1
   # -- Timeout for gRPC calls from the csi-attacher to the controller
   timeout: 30s
   # -- Extra arguments for csi-attacher controller sidecar
@@ -40,7 +40,7 @@ csiAttacher:
 csiResizer:
   image:
     repository: k8s.gcr.io/sig-storage/csi-resizer
-    tag: v1.1.0
+    tag: v1.2.0
   # -- Extra arguments for csi-resizer controller sidecar
   extraArgs: []
 
@@ -48,7 +48,7 @@ csiResizer:
 csiSnapshotter:
   image:
     repository: k8s.gcr.io/sig-storage/csi-snapshotter
-    tag: v4.0.0
+    tag: v4.1.1
   # -- Extra arguments for csi-snapshotter controller sidecar
   extraArgs: []
 
@@ -56,17 +56,17 @@ csiSnapshotter:
 csiNodeRegistrar:
   image:
     repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
-    tag: v2.1.0
+    tag: v2.2.0
   # -- Extra arguments for csi-node-registrar node sidecar
   extraArgs: []
 
 controller:
   # -- Extra arguments for seagate-exos-x-csi-controller container
-  extraArgs: []
+  extraArgs: [ -v=0 ]
 
 node:
   # -- Extra arguments for seagate-exos-x-csi-node containers
-  extraArgs: []
+  extraArgs: [ -v=0 ]
 
 multipathd:
   # -- Extra arguments for multipathd containers
