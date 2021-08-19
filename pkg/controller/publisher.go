@@ -29,37 +29,54 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	}
 
 	initiatorName := req.GetNodeId()
-	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, req.GetVolumeId())
+	volume := req.GetVolumeId()
+	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, volume)
 
-	maps, luns, _, err := driver.client.GetVolumeMaps(req.GetVolumeId())
-	klog.Infof("maps = %v", maps)
+	vmaps, _, err := driver.client.GetVolumeMaps2(volume)
 
 	if err != nil {
 		return nil, err
 	}
-	for i, hostName := range maps {
-		if hostName == initiatorName {
-			klog.Infof("volume %s is already mapped to (%s) [%s]", req.GetVolumeId(), initiatorName, luns[i])
-			return &csi.ControllerPublishVolumeResponse{
-				PublishContext: map[string]string{"lun": luns[i]},
-			}, nil
+
+	for _, vm := range vmaps.Mappings {
+		if vm.InitiatorId != initiatorName {
+			klog.Infof("volume (%s) is already attached to another initiator (%s)", volume, vm.InitiatorId)
+			return nil, status.Errorf(codes.FailedPrecondition, "volume (%s) is already attached to another initiator (%s)", volume, vm.InitiatorId)
 		}
 	}
 
-	lun, err := driver.client.ChooseLUN(initiatorName)
+	imaps, _, err := driver.client.GetInitiatorMaps(initiatorName)
+
+	// for _, im := range imaps.Mappings {
+	// 	if im.Volume == volume {
+	// 		klog.Infof("volume (%s) is already mapped to initiator (%s) using LUN %s", volume, initiatorName, im.LUN)
+	// 		publishInfo := map[string]string{"lun": im.LUN}
+	// 		return &csi.ControllerPublishVolumeResponse{PublishContext: publishInfo}, nil
+	// 	}
+	// }
+
+	var lun int
+	lun, err = driver.client.NextLUN(imaps)
 	if err != nil {
 		return nil, err
 	}
 	klog.Infof("using LUN %d", lun)
 
-	if err = driver.client.MapVolumeProcess(req.GetVolumeId(), initiatorName, lun); err != nil {
+	if err = driver.client.MapVolumeProcess(volume, initiatorName, lun); err != nil {
 		return nil, err
 	}
 
-	klog.Infof("successfully mapped volume %s for initiator %s", req.GetVolumeId(), initiatorName)
-	return &csi.ControllerPublishVolumeResponse{
-		PublishContext: map[string]string{"lun": strconv.Itoa(lun)},
-	}, nil
+	klog.Infof("successfully mapped volume %s for initiator %s using lun (%d)", req.GetVolumeId(), initiatorName, lun)
+
+	// Build CSI controller publish info from volume publish info
+	publishInfo := map[string]string{
+		"lun": strconv.Itoa(lun),
+	}
+
+	response := csi.ControllerPublishVolumeResponse{PublishContext: publishInfo}
+	klog.Infof("response: %v", response)
+
+	return &response, nil
 }
 
 // ControllerUnpublishVolume deattaches the given volume from the node

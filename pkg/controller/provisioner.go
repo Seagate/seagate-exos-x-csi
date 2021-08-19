@@ -49,7 +49,10 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	sizeStr := getSizeStr(size)
 	parameters := req.GetParameters()
 
-	klog.Infof("creating volume %q (size %s) in pool %q", volumeID, sizeStr, parameters[common.PoolConfigKey])
+	pool := parameters[common.PoolConfigKey]
+	controller.client.InitSystem(pool)
+
+	klog.Infof("creating volume %q (size %s) in pool %q", volumeID, sizeStr, pool)
 
 	volumeExists, err := controller.checkVolumeExists(volumeID, size)
 	if err != nil {
