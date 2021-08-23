@@ -48,7 +48,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 		return nil, err
 	}
 
-	klog.Infof("successfully mapped volume %s for initiator %s", req.GetVolumeId(), initiatorName)
+	klog.Infof("successfully mapped volume %s for initiator %s using LUN %d", req.GetVolumeId(), initiatorName, lun)
 	return &csi.ControllerPublishVolumeResponse{
 		PublishContext: map[string]string{"lun": strconv.Itoa(lun)},
 	}, nil
@@ -80,10 +80,6 @@ func (driver *Controller) chooseLUN(initiatorName string) (int, error) {
 	volumes, responseStatus, err := driver.client.ShowHostMaps(initiatorName)
 	if err != nil && responseStatus == nil {
 		return -1, err
-	}
-	if responseStatus.ReturnCode == hostMapDoesNotExistsErrorCode {
-		klog.Info("initiator does not exist, assuming there is no LUN mappings yet and using LUN 1")
-		return 1, nil
 	}
 	if responseStatus.ReturnCode == hostMapDoesNotExistsErrorCode {
 		klog.Info("initiator does not exist, assuming there is no LUN mappings yet and using LUN 1")
