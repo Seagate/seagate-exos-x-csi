@@ -2,44 +2,16 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
 )
-
-func getVolumeMapsHostNames(client *storageapi.Client, name string) ([]string, *storageapi.ResponseStatus, error) {
-	if name != "" {
-		name = fmt.Sprintf("\"%s\"", name)
-	}
-	res, status, err := client.FormattedRequest("/show/volume-maps/%s", name)
-	if err != nil {
-		return []string{}, status, err
-	}
-
-	hostNames := []string{}
-	for _, rootObj := range res.Objects {
-		if rootObj.Name != "volume-view" {
-			continue
-		}
-
-		for _, object := range rootObj.Objects {
-			hostName := object.PropertiesMap["identifier"].Data
-			if object.Name == "host-view" && hostName != "all other hosts" {
-				hostNames = append(hostNames, hostName)
-			}
-		}
-	}
-
-	return hostNames, status, err
-}
 
 // ControllerPublishVolume attaches the given volume to the node
 func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -56,7 +28,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	initiatorName := req.GetNodeId()
 	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, req.GetVolumeId())
 
-	hostNames, _, err := getVolumeMapsHostNames(driver.client, req.GetVolumeId())
+	hostNames, _, err := driver.client.GetVolumeMapsHostNames(req.GetVolumeId())
 	if err != nil {
 		return nil, err
 	}
@@ -113,6 +85,10 @@ func (driver *Controller) chooseLUN(initiatorName string) (int, error) {
 		klog.Info("initiator does not exist, assuming there is no LUN mappings yet and using LUN 1")
 		return 1, nil
 	}
+	if responseStatus.ReturnCode == hostMapDoesNotExistsErrorCode {
+		klog.Info("initiator does not exist, assuming there is no LUN mappings yet and using LUN 1")
+		return 1, nil
+	}
 	if err != nil {
 		return -1, err
 	}
@@ -145,7 +121,7 @@ func (driver *Controller) mapVolume(volumeName, initiatorName string, lun int) e
 	if err != nil && metadata == nil {
 		return err
 	}
-	if metadata.ReturnCode == hostDoesNotExistsErrorCode {
+	if metadata.ReturnCode == initiatorNicknameOrIdentifierNotFound {
 		nodeIDParts := strings.Split(initiatorName, ":")
 		if len(nodeIDParts) < 2 {
 			return status.Error(codes.InvalidArgument, "specified node ID is not a valid IQN")
@@ -153,7 +129,7 @@ func (driver *Controller) mapVolume(volumeName, initiatorName string, lun int) e
 
 		nodeName := strings.Join(nodeIDParts[1:], ":")
 		klog.Infof("initiator does not exist, creating it with nickname %s", nodeName)
-		_, _, err = driver.client.CreateHost(nodeName, initiatorName)
+		_, _, err = driver.client.CreateNickname(nodeName, initiatorName)
 		if err != nil {
 			return err
 		}

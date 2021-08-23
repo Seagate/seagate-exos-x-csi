@@ -32,6 +32,7 @@ const (
 	PasswordSecretKey         = "password"
 	StorageClassAnnotationKey = "storageClass"
 	VolumePrefixKey           = "volPrefix"
+	PoolTypeKey               = "poolType"
 
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 32
