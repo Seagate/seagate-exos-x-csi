@@ -20,7 +20,7 @@ image:
 csiProvisioner:
   image:
     repository: k8s.gcr.io/sig-storage/csi-provisioner
-    tag: v2.2.2
+    tag: v3.0.0
   # -- Timeout for gRPC calls from the csi-provisioner to the controller
   timeout: 30s
   # -- Extra arguments for csi-provisioner controller sidecar
@@ -56,7 +56,7 @@ csiSnapshotter:
 csiNodeRegistrar:
   image:
     repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
-    tag: v2.2.0
+    tag: v2.3.0
   # -- Extra arguments for csi-node-registrar node sidecar
   extraArgs: []
 
