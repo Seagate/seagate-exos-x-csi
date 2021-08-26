@@ -30,7 +30,7 @@ import (
 
 // ValidateVolumeName verifies that the string only includes spaces and printable UTF-8 characters except: " , < \
 func ValidateVolumeName(s string) bool {
-	klog.Infof("ValidateVolumeName %q", s)
+	klog.V(2).Infof("ValidateVolumeName %q", s)
 	for i := 0; i < len(s); i++ {
 		if s[i] == '"' || s[i] == ',' || s[i] == '<' || s[i] == '\\' {
 			return false

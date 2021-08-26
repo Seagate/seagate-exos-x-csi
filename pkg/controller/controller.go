@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	hostDoesNotExistsErrorCode    = -10386
-	hostMapDoesNotExistsErrorCode = -10074
-	unmapFailedErrorCode          = -10509
-	volumeNotFoundErrorCode       = -10075
-	volumeHasSnapshot             = -10183
-	snapshotNotFoundErrorCode     = -10050
-	snapshotAlreadyExists         = -10186
+	snapshotNotFoundErrorCode             = -10050
+	hostMapDoesNotExistsErrorCode         = -10074
+	volumeNotFoundErrorCode               = -10075
+	volumeHasSnapshot                     = -10183
+	snapshotAlreadyExists                 = -10186
+	initiatorNicknameOrIdentifierNotFound = -10386
+	unmapFailedErrorCode                  = -10509
 )
 
 var volumeCapabilities = []*csi.VolumeCapability{
