@@ -1,5 +1,16 @@
 #!/bin/bash
 
+function setNamespace()
+{
+    namespace=$CSI_NAMESPACE
+    if [ -z "$namespace" ]
+    then
+        export CSI_NAMESPACE=csi
+        namespace=$CSI_NAMESPACE
+    fi
+    echo "[] using namespace=$namespace"
+}
+
 function runCommand()
 {
     echo ""

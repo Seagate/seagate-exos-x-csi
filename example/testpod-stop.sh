@@ -4,7 +4,7 @@ source common.sh
 
 echo "[] testpod-stop ($1)"
 
-helmpath=../helm/csi-charts/
+setNamespace
 
 if [ -z ${1+x} ]; then
     echo ""
@@ -20,11 +20,14 @@ else
 fi
 
 banner "Delete Resources"
-runCommand "kubectl delete -f testpod-$system.yaml"
-runCommand "kubectl delete -f storageclass-$system.yaml"
-runCommand "kubectl delete -f secret-$system.yaml"
-runCommand "helm uninstall test-release"
+runCommand "kubectl delete -f testpod-$system.yaml --namespace $namespace"
+
+runCommand "sleep 20"
+
+runCommand "kubectl delete -f storageclass-$system.yaml --namespace $namespace"
+runCommand "kubectl delete -f secret-$system.yaml --namespace $namespace"
+runCommand "helm uninstall --namespace $namespace test-release"
 
 banner "Check Resources"
 
-runCommand "kubectl get all"
+runCommand "kubectl get all --namespace $namespace"
