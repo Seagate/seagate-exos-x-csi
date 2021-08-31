@@ -3,10 +3,10 @@ ifndef DOCKER_HUB_REPOSITORY
 endif
 
 ifndef VERSION
-	VERSION = latest
-else
-	VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
+	VERSION = v0.5.0
 endif
+
+VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
 
 ifndef BIN
 	BIN = seagate-exos-x-csi
@@ -41,7 +41,6 @@ controller:
 .PHONY: controller
 
 node:
-	echo "$(VERSION_FLAG)"
 	go build -v -ldflags "$(VERSION_FLAG)" -o $(BIN)-node ./cmd/node
 .PHONY: node
 

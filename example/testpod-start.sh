@@ -2,17 +2,31 @@
 
 source common.sh
 
-echo "[] testpod-start ($1)"
+helmpath=/home/seagate/github.com/Seagate/seagate-exos-x-csi/helm/csi-charts/
 
-helmpath=../helm/csi-charts/
+# Make sure the helm directory exists
+if [ ! -d "$helmpath" ] 
+then
+    echo ""
+    echo "ERROR: Helm path DOES NOT exist, helmpath=$helmpath" 
+    echo "NOTE: Update this script with the correct helm path." 
+    echo ""
+    exit 1
+fi
 
 if [ -z ${1+x} ]; then
     echo ""
-    echo "Usage: testpod-start [id]";
+    echo "Usage: testpod-start [target] [image:version]";
     echo "Where:"
-    echo "   [id] - specifies a string used to install and run a particular test pod configuration."
+    echo "   [target]        - specifies a string used to install and run a particular test pod configuration."
+    echo "   [image:version] - specify a registry image for the csi driver image, overrides values.yaml settings"
     echo ""
-    echo "Example: 'testpod-start system1'"
+    echo "Helm Path: $helmpath"
+    echo ""
+    echo "Example: testpod-start system1"
+    echo "Example: testpod-start system1 docker.io/seagatecsi/seagate-exos-x-csi:v0.5.1"
+    echo ""
+    echo "Steps:"
     echo "   1) helm install test-release $helmpath -f $helmpath/values.yaml"
     echo "   2) kubectl create -f secret-system1.yaml"
     echo "   3) kubectl create -f storageclass-system1.yaml"
@@ -23,29 +37,47 @@ else
     system=$1
 fi
 
+if [ -z "$2" ]; then
+    registry="default"
+else
+    registry=$2
+    arrIN=(${registry//:/ })
+    image=${arrIN[0]}
+    version=${arrIN[1]}
+fi
+
+setNamespace
+
+echo "[] testpod-start ($system) [$registry] [namespace=$namespace]"
+
 #
 # 1) Run helm install using local charts
 #
-banner "1) Run helm install using ($helmpath)"
-runCommand "helm install test-release $helmpath -f $helmpath/values.yaml"
+if [ "$registry" == "default" ]; then
+    banner "1) Run helm install using ($helmpath)"
+    runCommand "helm install test-release --namespace $namespace $helmpath -f $helmpath/values.yaml"
+else
+    banner "1) Run helm install using ($helmpath) --set image.repository=$image --set image.tag=$version"
+    runCommand "helm install test-release --namespace $namespace $helmpath -f $helmpath/values.yaml --set image.repository=$image --set image.tag=$version"
+fi
 
 # Verify that the controller and node pods are running
-controllerid=$(kubectl get pods | grep controller | awk '{print $1}')
-nodeid=$(kubectl get pods | grep node | awk '{print $1}')
+controllerid=$(kubectl get pods --namespace $namespace | grep controller | awk '{print $1}')
+nodeid=$(kubectl get pods --namespace $namespace | grep node | awk '{print $1}')
 
 counter=1
 success=0
 continue=1
-maxattempts=5
+maxattempts=6
 
 while [ $continue ]
 do
     echo ""
     echo "[$counter] Verify ($controllerid) and ($nodeid) are Running"
 
-    runCommand "kubectl get pods -o wide"
-    controllerstatus=$(kubectl get pods $controllerid | grep $controllerid | awk '{print $3}')
-    nodestatus=$(kubectl get pods $nodeid | grep $nodeid | awk '{print $3}')
+    runCommand "kubectl get pods -o wide --namespace $namespace"
+    controllerstatus=$(kubectl get pods $controllerid --namespace $namespace | grep $controllerid | awk '{print $3}')
+    nodestatus=$(kubectl get pods $nodeid --namespace $namespace | grep $nodeid | awk '{print $3}')
 
     if [ "$controllerstatus" == "Running" ] && [ "$nodestatus" == "Running" ]; then
         echo "SUCCESS: ($controllerid) and ($nodeid) are Running"
@@ -65,7 +97,7 @@ do
     ((counter++))
 done
 
-if [[ "$success" -eq 0 ]]; then
+if [ "$success" -eq 0 ]; then
     exit
 fi
 
@@ -74,9 +106,9 @@ fi
 #
 secret=seagate-exos-x-csi-secrets
 
-banner "2) kubectl create -f secret-$system.yaml"
-runCommand "kubectl create -f secret-$system.yaml"
-runCommand "kubectl describe secrets $secret"
+banner "2) kubectl create -f secret-$system.yaml --namespace $namespace"
+runCommand "kubectl create -f secret-$system.yaml --namespace $namespace"
+runCommand "kubectl describe secrets $secret --namespace $namespace"
 
 if [[ "$?" -ne 0 ]]; then
     echo ""
@@ -90,9 +122,9 @@ fi
 #
 storageclass=systems-storageclass
 
-banner "3) kubectl create -f storageclass-$system.yaml"
-runCommand "kubectl create -f storageclass-$system.yaml"
-runCommand "kubectl describe sc $storageclass"
+banner "3) kubectl create -f storageclass-$system.yaml --namespace $namespace"
+runCommand "kubectl create -f storageclass-$system.yaml --namespace $namespace"
+runCommand "kubectl describe sc $storageclass --namespace $namespace"
 
 if [[ "$?" -eq 1 ]]; then
     echo ""
@@ -106,31 +138,33 @@ fi
 #
 testpod=test-pod
 
-banner "4) kubectl create -f testpod-$system.yaml"
-runCommand "kubectl create -f testpod-$system.yaml"
+banner "4) kubectl create -f testpod-$system.yaml --namespace $namespace"
+runCommand "kubectl create -f testpod-$system.yaml --namespace $namespace"
 
 counter=1
 success=0
 continue=1
-maxattempts=15
+maxattempts=8
 
 while [ $continue ]
 do
-    echo ""
-    echo "[$counter] Verify ($testpod) is Running"
+    testpodstatus=$(kubectl get pods --namespace $namespace | grep $testpod | awk '{print $3}')
+    testpodname=$(kubectl get pods --namespace $namespace | grep $testpod | awk '{print $1}')
 
-    runCommand "kubectl get pods -o wide"
-    testpodstatus=$(kubectl get pods $testpod | grep $testpod | awk '{print $3}')
+    echo ""
+    echo "[$counter] Verify ($testpodname) is Running"
+
+    runCommand "kubectl get pods -o wide --namespace $namespace"
 
     if [ "$testpodstatus" == "Running" ]; then
-        echo "SUCCESS: ($testpod) is Running"
+        echo "SUCCESS: ($testpodname) is Running"
         success=1
         break
     fi
 
     if [[ "$counter" -eq $maxattempts ]]; then
         echo ""
-        echo "ERROR: Max attempts ($maxattempts) reached and ($testpod) is NOT running."
+        echo "ERROR: Max attempts ($maxattempts) reached and ($testpodname) is NOT running."
         echo ""
         break
     else
