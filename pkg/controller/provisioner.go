@@ -26,16 +26,14 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	size := req.GetCapacityRange().GetRequiredBytes()
 	sizeStr := getSizeStr(size)
 	parameters := req.GetParameters()
-	poolType := parameters[common.PoolTypeKey]
+	pool := parameters[common.PoolConfigKey]
+	poolType, _ := controller.client.Info.GetPoolType(pool)
 
 	if len(poolType) == 0 {
 		poolType = "Virtual"
 	}
 
-	pool := parameters[common.PoolConfigKey]
-	controller.client.InitSystem(pool)
-
-	klog.Infof("creating volume %q (size %s) in pool %q", volumeID, sizeStr, pool)
+	klog.Infof("creating volume %q (size %s) in pool %q [%s]", volumeID, sizeStr, pool, poolType)
 
 	volumeExists, err := controller.client.CheckVolumeExists(volumeID, size)
 	if err != nil {

@@ -3,7 +3,7 @@ ifndef DOCKER_HUB_REPOSITORY
 endif
 
 ifndef VERSION
-	VERSION = v0.5.0
+	VERSION = v0.5.1
 endif
 
 VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
