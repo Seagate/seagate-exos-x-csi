@@ -2,11 +2,7 @@ package controller
 
 import (
 	"context"
-	"sort"
-	"strconv"
-	"strings"
 
-	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,33 +21,14 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
 	}
 
+	volumeName := req.GetVolumeId()
 	initiatorName := req.GetNodeId()
-	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, req.GetVolumeId())
+	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, volumeName)
 
-	hostNames, _, err := driver.client.GetVolumeMapsHostNames(req.GetVolumeId())
-	if err != nil {
-		return nil, err
-	}
-	for _, hostName := range hostNames {
-		if hostName != initiatorName {
-			return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already attached to another node", req.GetVolumeId())
-		}
-	}
-
-	lun, err := driver.chooseLUN(initiatorName)
-	if err != nil {
-		return nil, err
-	}
-	klog.Infof("using LUN %d", lun)
-
-	if err = driver.mapVolume(req.GetVolumeId(), initiatorName, lun); err != nil {
-		return nil, err
-	}
-
-	klog.Infof("successfully mapped volume %s for initiator %s using LUN %d", req.GetVolumeId(), initiatorName, lun)
+	lun, err := driver.client.PublishVolume(volumeName, initiatorName)
 	return &csi.ControllerPublishVolumeResponse{
-		PublishContext: map[string]string{"lun": strconv.Itoa(lun)},
-	}, nil
+		PublishContext: map[string]string{"lun": lun},
+	}, err
 }
 
 // ControllerUnpublishVolume deattaches the given volume from the node
@@ -73,72 +50,4 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 
 	klog.Infof("successfully unmapped volume %s from all initiators", req.GetVolumeId())
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
-}
-
-func (driver *Controller) chooseLUN(initiatorName string) (int, error) {
-	klog.Infof("listing all LUN mappings")
-	volumes, responseStatus, err := driver.client.ShowHostMaps(initiatorName)
-	if err != nil && responseStatus == nil {
-		return -1, err
-	}
-	if responseStatus.ReturnCode == hostMapDoesNotExistsErrorCode {
-		klog.Info("initiator does not exist, assuming there is no LUN mappings yet and using LUN 1")
-		return 1, nil
-	}
-	if err != nil {
-		return -1, err
-	}
-
-	sort.Sort(Volumes(volumes))
-
-	klog.V(5).Infof("checking if LUN 1 is not already in use")
-	if len(volumes) == 0 || volumes[0].LUN > 1 {
-		return 1, nil
-	}
-
-	klog.V(5).Infof("searching for an available LUN between LUNs in use")
-	for index := 1; index < len(volumes); index++ {
-		if volumes[index].LUN-volumes[index-1].LUN > 1 {
-			return volumes[index-1].LUN + 1, nil
-		}
-	}
-
-	klog.V(5).Infof("checking if next LUN is not above maximum LUNs limit")
-	if volumes[len(volumes)-1].LUN+1 < common.MaximumLUN {
-		return volumes[len(volumes)-1].LUN + 1, nil
-	}
-
-	return -1, status.Error(codes.ResourceExhausted, "no more available LUNs")
-}
-
-func (driver *Controller) mapVolume(volumeName, initiatorName string, lun int) error {
-	klog.Infof("trying to map volume %s for initiator %s on LUN %d", volumeName, initiatorName, lun)
-	_, metadata, err := driver.client.MapVolume(volumeName, initiatorName, "rw", lun)
-	if err != nil && metadata == nil {
-		return err
-	}
-	if metadata.ReturnCode == initiatorNicknameOrIdentifierNotFound {
-		nodeIDParts := strings.Split(initiatorName, ":")
-		if len(nodeIDParts) < 2 {
-			return status.Error(codes.InvalidArgument, "specified node ID is not a valid IQN")
-		}
-
-		nodeName := strings.Join(nodeIDParts[1:], ":")
-		klog.Infof("initiator does not exist, creating it with nickname %s", nodeName)
-		_, _, err = driver.client.CreateNickname(nodeName, initiatorName)
-		if err != nil {
-			return err
-		}
-		klog.Info("retrying to map volume")
-		_, _, err = driver.client.MapVolume(volumeName, initiatorName, "rw", lun)
-		if err != nil {
-			return err
-		}
-	} else if metadata.ReturnCode == volumeNotFoundErrorCode {
-		return status.Errorf(codes.NotFound, "volume %s not found", volumeName)
-	} else if err != nil {
-		return status.Error(codes.Internal, err.Error())
-	}
-
-	return nil
 }

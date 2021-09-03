@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -11,27 +10,6 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
 )
-
-func (controller *Controller) checkVolumeExists(volumeID string, size int64) (bool, error) {
-	data, responseStatus, err := controller.client.ShowVolumes(volumeID)
-	if err != nil && responseStatus.ReturnCode != -10058 {
-		return false, err
-	}
-
-	for _, object := range data.Objects {
-		if object.Name == "volume" && object.PropertiesMap["volume-name"].Data == volumeID {
-			blocks, _ := strconv.ParseInt(object.PropertiesMap["blocks"].Data, 10, 64)
-			blocksize, _ := strconv.ParseInt(object.PropertiesMap["blocksize"].Data, 10, 64)
-
-			if blocks*blocksize == size {
-				return true, nil
-			}
-			return true, status.Error(codes.AlreadyExists, "cannot create volume with same name but different capacity than the existing one")
-		}
-	}
-
-	return false, nil
-}
 
 // CreateVolume creates a new volume from the given request. The function is idempotent.
 func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
@@ -48,15 +26,16 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	size := req.GetCapacityRange().GetRequiredBytes()
 	sizeStr := getSizeStr(size)
 	parameters := req.GetParameters()
-	poolType := parameters[common.PoolTypeKey]
+	pool := parameters[common.PoolConfigKey]
+	poolType, _ := controller.client.Info.GetPoolType(pool)
 
 	if len(poolType) == 0 {
 		poolType = "Virtual"
 	}
 
-	klog.Infof("creating volume %q (size %s) in pool %q", volumeID, sizeStr, parameters[common.PoolConfigKey])
+	klog.Infof("creating volume %q (size %s) in pool %q [%s]", volumeID, sizeStr, pool, poolType)
 
-	volumeExists, err := controller.checkVolumeExists(volumeID, size)
+	volumeExists, err := controller.client.CheckVolumeExists(volumeID, size)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +73,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	}
 
 	klog.Infof("created volume %s (%s)", volumeID, sizeStr)
+	// Log struct with field names
 	klog.V(8).Infof("created volume %+v", volume)
 	return volume, nil
 }

@@ -234,7 +234,9 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	}
 
 	klog.Info("login was successful")
-	return nil
+	err = controller.client.InitSystemInfo()
+
+	return err
 }
 
 func runPreflightChecks(parameters *map[string]string, capabilities *[]*csi.VolumeCapability) error {

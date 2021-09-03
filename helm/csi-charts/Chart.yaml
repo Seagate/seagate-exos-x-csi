@@ -1,7 +1,7 @@
 apiVersion: v2
 name: csi-driver
-version: 0.5.0
-appVersion: 0.5.0
+version: 0.5.1
+appVersion: 0.5.1
 description: A dynamic persistent volume (PV) provisioner for Seagate Exos X storage systems.
 type: application
 home: https://github.com/Seagate/seagate-exos-x-csi
