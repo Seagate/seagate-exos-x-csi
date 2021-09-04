@@ -45,9 +45,7 @@ func createRequestVolume(name string, prefix string) (csi.CreateVolumeRequest, e
 }
 
 func runTest(t *testing.T, idin string, idout string, prefix string) {
-	req, _ := createRequestVolume(idin, prefix)
-	id, err := TranslateVolumeName(&req)
-
+	id, err := TranslateName(idin, prefix)
 	g := NewWithT(t)
 	g.Expect(err).To(BeNil())
 	g.Expect(id).To(Equal(idout))
@@ -56,13 +54,7 @@ func runTest(t *testing.T, idin string, idout string, prefix string) {
 func TestTranslate(t *testing.T) {
 
 	// Test empty name
-	req := csi.CreateVolumeRequest{
-		Name:       "",
-		Parameters: map[string]string{"volPrefix": "csi"},
-	}
-	_, err := TranslateVolumeName(&req)
-	g := NewWithT(t)
-	g.Expect(err).ToNot(BeNil())
+	runTest(t, "", "csi_", "csi")
 
 	// Test with no prefix
 	runTest(t, "pvc-03c551d9-7e77-43ff-993e-c2308d2f09a1", "03c551d97e7743ff993ec2308d2f09a1", "")
@@ -78,17 +70,20 @@ func TestTranslate(t *testing.T) {
 	runTest(t, "51d97e7743ff993ec2308d2f09a1", "csi_51d97e7743ff993ec2308d2f09a1", "csi_123")
 	runTest(t, "pvc-51d9-7e77-43ff-993e-c2308d2f09a1", "cd_51d97e7743ff993ec2308d2f09a1", "cd")
 	runTest(t, "pvc-51d9-7e77-43ff-993e-c2308d2f09a1", "c_51d97e7743ff993ec2308d2f09a1", "c")
+
+	// Test with prefix
+	runTest(t, "snapshot-03c551d9-7e77-43ff-993e-c2308d2f09a1", "csi_51d97e7743ff993ec2308d2f09a1", "csi")
 }
 
 func TestValidate(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(ValidateVolumeName("abcdefghijklmnopqrstuvwxyz")).To(BeTrue())
-	g.Expect(ValidateVolumeName("ABCDEFGHIJKLMNOPQRSTUVWXYZ")).To(BeTrue())
-	g.Expect(ValidateVolumeName("a b _ . - c")).To(BeTrue())
+	g.Expect(ValidateName("abcdefghijklmnopqrstuvwxyz")).To(BeTrue())
+	g.Expect(ValidateName("ABCDEFGHIJKLMNOPQRSTUVWXYZ")).To(BeTrue())
+	g.Expect(ValidateName("a b _ . - c")).To(BeTrue())
 
 	// 	Test unaccepable characters: " , < \
-	g.Expect(ValidateVolumeName("\"abc")).To(BeFalse())
-	g.Expect(ValidateVolumeName("abc,")).To(BeFalse())
-	g.Expect(ValidateVolumeName("abc<def")).To(BeFalse())
-	g.Expect(ValidateVolumeName("abc\\def")).To(BeFalse())
+	g.Expect(ValidateName("\"abc")).To(BeFalse())
+	g.Expect(ValidateName("abc,")).To(BeFalse())
+	g.Expect(ValidateName("abc<def")).To(BeFalse())
+	g.Expect(ValidateName("abc\\def")).To(BeFalse())
 }
