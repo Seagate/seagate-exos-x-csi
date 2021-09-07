@@ -14,18 +14,18 @@ import (
 // CreateVolume creates a new volume from the given request. The function is idempotent.
 func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 
-	volumeID, err := common.TranslateVolumeName(req)
+	parameters := req.GetParameters()
+	volumeID, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
 		return nil, err
 	}
 
-	if common.ValidateVolumeName(volumeID) == false {
+	if common.ValidateName(volumeID) == false {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
 	}
 
 	size := req.GetCapacityRange().GetRequiredBytes()
 	sizeStr := getSizeStr(size)
-	parameters := req.GetParameters()
 	pool := parameters[common.PoolConfigKey]
 	poolType, _ := controller.client.Info.GetPoolType(pool)
 

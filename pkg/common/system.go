@@ -22,15 +22,12 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"k8s.io/klog"
 )
 
-// ValidateVolumeName verifies that the string only includes spaces and printable UTF-8 characters except: " , < \
-func ValidateVolumeName(s string) bool {
-	klog.V(2).Infof("ValidateVolumeName %q", s)
+// ValidateName verifies that the string only includes spaces and printable UTF-8 characters except: " , < \
+func ValidateName(s string) bool {
+	klog.V(2).Infof("ValidateName %q", s)
 	for i := 0; i < len(s); i++ {
 		if s[i] == '"' || s[i] == ',' || s[i] == '<' || s[i] == '\\' {
 			return false
@@ -41,24 +38,21 @@ func ValidateVolumeName(s string) bool {
 	return true
 }
 
-// TranslateVolumeName converts the passed in volume name to the translated volume name
-func TranslateVolumeName(req *csi.CreateVolumeRequest) (string, error) {
+// TranslateName converts the passed in volume name to the translated volume name
+func TranslateName(name, prefix string) (string, error) {
 
-	if req.GetName() == "" {
-		return "", status.Error(codes.InvalidArgument, "cannot create volume with an empty name")
-	}
-
-	originalVolumeID := req.GetName()
-	volumeID := originalVolumeID
-	parameters := req.GetParameters()
-	prefix := parameters[VolumePrefixKey]
+	volumeID := name
 
 	if len(prefix) == 0 {
 		// If string is greater than max, truncate it, otherwise return original string
 		if len(volumeID) > VolumeNameMaxLength {
 			// Skip over 'pvc-'
-			if volumeID[0:4] == "pvc-" {
+			if len(volumeID) >= 4 && volumeID[0:4] == "pvc-" {
 				volumeID = volumeID[4:]
+			}
+			// Skip over 'snapshot-'
+			if len(volumeID) >= 9 && volumeID[0:9] == "snapshot-" {
+				volumeID = volumeID[9:]
 			}
 			volumeID = strings.ReplaceAll(volumeID, "-", "")
 			volumeID = volumeID[:VolumeNameMaxLength]
@@ -66,8 +60,13 @@ func TranslateVolumeName(req *csi.CreateVolumeRequest) (string, error) {
 	} else {
 		// Skip over 'pvc-' and remove all dashes
 		uuid := volumeID
-		if volumeID[0:4] == "pvc-" {
+		if len(volumeID) >= 4 && volumeID[0:4] == "pvc-" {
 			uuid = volumeID[4:]
+			klog.Infof("TranslateName(pvc): uuid=%q", uuid)
+		}
+		if len(volumeID) >= 9 && volumeID[0:9] == "snapshot-" {
+			uuid = volumeID[9:]
+			klog.Infof("TranslateName(snapshot): uuid=%q", uuid)
 		}
 		uuid = strings.ReplaceAll(uuid, "-", "")
 
@@ -85,7 +84,7 @@ func TranslateVolumeName(req *csi.CreateVolumeRequest) (string, error) {
 		}
 	}
 
-	klog.Infof("TranslateVolumeName %q[%d], prefix %q[%d], result %q[%d]", originalVolumeID, len(originalVolumeID), prefix, len(prefix), volumeID, len(volumeID))
+	klog.Infof("TranslateName %q[%d], prefix %q[%d], result %q[%d]", name, len(name), prefix, len(prefix), volumeID, len(volumeID))
 
 	return volumeID, nil
 }

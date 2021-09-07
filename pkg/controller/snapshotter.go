@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	storageapi "github.com/Seagate/seagate-exos-x-api-go"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -19,7 +19,16 @@ import (
 
 // CreateSnapshot creates a snapshot of the given volume
 func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	name := strings.Replace(req.Name[9:], "-", "", -1)
+
+	parameters := req.GetParameters()
+	name, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
+	if err != nil {
+		return nil, err
+	}
+
+	if common.ValidateName(name) == false {
+		return nil, status.Error(codes.InvalidArgument, "snapshot name contains invalid characters")
+	}
 
 	_, respStatus, err := controller.client.CreateSnapshot(req.SourceVolumeId, name)
 	if err != nil && respStatus.ReturnCode != snapshotAlreadyExists {
