@@ -166,7 +166,7 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 		DoDiscovery: true,
 	}
 
-	path, err := iscsi.Connect(connector)
+	path, err := iscsi.Connect(&connector)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
@@ -261,6 +261,7 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	klog.Infof("connector.DevicePath (%s)", connector.DevicePath)
 
 	if isVolumeInUse(connector.DevicePath) {
 		klog.Info("volume is still in use on the node, thus it will not be detached")
@@ -472,8 +473,10 @@ func readInitiatorName() (string, error) {
 	return "", fmt.Errorf("InitiatorName key is missing from %s", initiatorNameFilePath)
 }
 
+// isVolumeInUse: Use findmnt to determine if the devie path is mounted or not.
 func isVolumeInUse(devicePath string) bool {
 	_, err := exec.Command("findmnt", devicePath).CombinedOutput()
+	klog.Infof("isVolumeInUse: findmnt %s, err=%v", devicePath, err)
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			return false
