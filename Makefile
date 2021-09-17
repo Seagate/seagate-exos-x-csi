@@ -1,11 +1,15 @@
 .PHONY: help all bin controller node test image limage ubi push clean
 
-ifndef DOCKER_HUB_REPOSITORY
-	DOCKER_HUB_REPOSITORY = ghcr.io/seagate
+ifdef DOCKER_HUB_REPOSITORY
+DOCKER_HUB_REPOSITORY := $(DOCKER_HUB_REPOSITORY)
+else
+DOCKER_HUB_REPOSITORY := ghcr.io/seagate
 endif
 
-ifndef VERSION
-	VERSION = v0.5.4
+ifdef VERSION
+VERSION := $(VERSION)
+else
+VERSION := v0.5.5
 endif
 
 VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
