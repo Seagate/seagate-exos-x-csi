@@ -379,10 +379,10 @@ func findDeviceFormat(device string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	output, err := exec.CommandContext(ctx, "blkid",
-		"--probe",
-		"--match-tag", "TYPE",
-		"--match-tag", "PTTYPE",
-		"--output", "export",
+		"-p",
+		"-s", "TYPE",
+		"-s", "PTTYPE",
+		"-o", "export",
 		device).CombinedOutput()
 
 	if ctx.Err() == context.DeadlineExceeded {
