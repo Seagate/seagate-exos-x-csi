@@ -40,31 +40,7 @@ This CSI driver is an open-source project under the Apache 2.0 [license](./LICEN
 ```
 cat /proc/filesystems
 ```
-- Update /etc/multipath.conf with the following lines:
-```
-    defaults {
-      polling_interval 2
-      find_multipaths "yes"
-      retain_attached_hw_handler "no"
-      disable_changed_wwids "yes"
-    }
-    devices {
-            device {
-            vendor "HP"
-            product "MSA 2040 SAN"
-            path_grouping_policy "group_by_prio"
-            getuid_callout "/lib/udev/scsi_id --whitelisted --device=/dev/%n"
-            prio "alua"
-            path_selector "round-robin 0"
-            path_checker "tur"
-            hardware_handler "0"
-            failback "immediate"
-            rr_weight "uniform"
-            rr_min_io_rq 1
-            no_path_retry 18
-            }
-    }
-```
+- Update /etc/multipath.conf. Check docs/iscsi/multipath.conf as a reference
 - Restart MultipathD
 ```
     service multipath-tools restart
@@ -95,6 +71,7 @@ The preferred installation approach is to use the provided `Helm Charts` under t
 ## Documentation
 
 You can find more documentation in the [docs](./docs) directory.
+Check docs/Seagate_Exos_X_CSI_driver_functionality.ipynb for usage examples and configuration files.
 
 ## Command-line arguments
 
