@@ -146,8 +146,9 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 
 	klog.Infof("publishing volume %s", req.GetVolumeId())
 
-	portals := strings.Split(req.GetVolumeContext()[common.PortalsConfigKey], ",")
-	klog.Infof("ISCSI portals: %s", portals)
+	iqn := req.GetVolumeContext()["iqn"]
+	portals := strings.Split(req.GetVolumeContext()["portals"], ",")
+	klog.Infof("iSCSI iqn: %s, portals: %v", iqn, portals)
 
 	lun, _ := strconv.ParseInt(req.GetPublishContext()["lun"], 10, 32)
 	klog.Infof("LUN: %d", lun)
@@ -156,7 +157,7 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	targets := make([]iscsi.TargetInfo, 0)
 	for _, portal := range portals {
 		targets = append(targets, iscsi.TargetInfo{
-			Iqn:    req.GetVolumeContext()[common.TargetIQNConfigKey],
+			Iqn:    iqn,
 			Portal: portal,
 		})
 	}

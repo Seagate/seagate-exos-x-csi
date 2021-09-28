@@ -259,12 +259,6 @@ func runPreflightChecks(parameters *map[string]string, capabilities *[]*csi.Volu
 	if err := checkIfKeyExistsInConfig(common.PoolConfigKey); err != nil {
 		return err
 	}
-	if err := checkIfKeyExistsInConfig(common.TargetIQNConfigKey); err != nil {
-		return err
-	}
-	if err := checkIfKeyExistsInConfig(common.PortalsConfigKey); err != nil {
-		return err
-	}
 
 	if capabilities != nil {
 		if len(*capabilities) == 0 {
