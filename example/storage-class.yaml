@@ -14,6 +14,4 @@ parameters:
   csi.storage.k8s.io/controller-expand-secret-name: seagate-exos-x-csi-secrets
   csi.storage.k8s.io/controller-expand-secret-namespace: default
   fsType: ext4 # Desired filesystem
-  iqn: iqn.2015-11.com.hpe:storage.msa2040.163639c929 # Gallium 10.235.212.197 Appliance IQN
   pool: A # Pool to use on the IQN to provision volumes
-  portals: 10.235.212.199,10.235.212.200 # Comma separated list of portal ips. Gallium 10.235.212.197 Ports A1, B1

@@ -25,8 +25,6 @@ const PluginName = "csi-exos-x.seagate.com"
 const (
 	FsTypeConfigKey           = "fsType"
 	PoolConfigKey             = "pool"
-	TargetIQNConfigKey        = "iqn"
-	PortalsConfigKey          = "portals"
 	APIAddressConfigKey       = "apiAddress"
 	UsernameSecretKey         = "username"
 	PasswordSecretKey         = "password"

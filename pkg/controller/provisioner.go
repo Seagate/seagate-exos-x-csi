@@ -63,6 +63,12 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		}
 	}
 
+	// Fill iSCSI context parameters
+	targetid, _ := controller.client.Info.GetTargetId()
+	req.GetParameters()["iqn"] = targetid
+	portals, _ := controller.client.Info.GetPortals()
+	req.GetParameters()["portals"] = portals
+
 	volume := &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      volumeID,

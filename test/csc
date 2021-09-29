@@ -4,8 +4,6 @@ csc=$(which csc)
 
 fsType="ext4"
 pool="B"
-iqn="iqn.2015-11.com.hpe:storage.msa2050.18323cc9ed"
-portals="10.14.84.211,10.14.84.212"
 
 function setup {
 	cd $(dirname $0)
@@ -14,4 +12,4 @@ function setup {
 }
 
 setup
-${csc} --params "fsType=${fsType},pool=${pool},iqn=${iqn},portals=${portals}" $@
+${csc} --params "fsType=${fsType},pool=${pool}" $@

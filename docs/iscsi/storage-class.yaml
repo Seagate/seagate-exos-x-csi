@@ -12,7 +12,5 @@ parameters:
   csi.storage.k8s.io/controller-expand-secret-name: secret-seagate
   csi.storage.k8s.io/controller-expand-secret-namespace: seagate
   fsType: ext4 # Desired filesystem
-  iqn: iqn.1992-09.com.seagate:01.array.00c0ff0afca8
   pool: A # Pool for volumes provisioning
-  portals: 172.9.1.22,172.9.1.23
   volPrefix: stx # Desired prefix for volume naming, an underscore is appended
