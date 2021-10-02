@@ -16,3 +16,5 @@ seagate-exos-x-csi-controller
 
 # vs code
 .vscode/
+
+node_modules/

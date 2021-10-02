@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  release:
+    name: Update Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: ridedott/release-me-action@master
+      with:
+        release-branches: '["main"]'
+        disable-changelog: false
+
+    - name: Output
+      run: echo "released version is ${{ steps.build_package.outputs.version }}, type is ${{ steps.build_package.outputs.level }}"
