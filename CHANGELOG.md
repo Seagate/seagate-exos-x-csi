@@ -1,3 +1,13 @@
+## [1.0.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.0...v1.0.1) (2021-10-02)
+
+### Chores
+
+- address ansi-regex security alert to use v5.0.1 ([5a1120b](https://github.com/Seagate/seagate-exos-x-csi/commit/5a1120b72e91bb7211a5d859c9eba87bb41cdf76))
+
+### Other
+
+- Merge branch 'main' of github.com:Seagate/seagate-exos-x-csi into main ([563b7c0](https://github.com/Seagate/seagate-exos-x-csi/commit/563b7c022ed3c694cf0e73657bd35642a991e909))
+
 # 1.0.0 (2021-10-02)
 
 ### Bug Fixes
