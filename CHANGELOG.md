@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.1...v1.0.2) (2021-10-03)
+
+### Chores
+
+- trim changelog ([8ed43d2](https://github.com/Seagate/seagate-exos-x-csi/commit/8ed43d2bd2e0c06f1cd65834ac4fca1741895c84))
+
 ## [1.0.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.0...v1.0.1) (2021-10-02)
 
 ### Chores
@@ -5,6 +11,7 @@
 - address ansi-regex security alert to use v5.0.1 ([5a1120b](https://github.com/Seagate/seagate-exos-x-csi/commit/5a1120b72e91bb7211a5d859c9eba87bb41cdf76))
 
 # 1.0.0 (2021-10-02)
+
 ### Features
 
 - **redhat-ubi:** Switched csi driver container image to use redhat/ubi8 ([1fa59fc](https://github.com/Seagate/seagate-exos-x-csi/commit/1fa59fc938ffe7eb1e98c6ae539baee44234a62a))
