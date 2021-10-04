@@ -19,8 +19,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Fetch latest release version
+        id: fetch-latest-release
+        uses: reloc8/action-latest-release-version@1.0.0
+
+      - name: Output
+        run: echo "released version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
+
       - name: Build driver images
-        run: export VERSION=${{ github.event.release.tag_name }}
+        run: export VERSION=${{ steps.fetch-latest-release.outputs.latest-release }}
         run: make bin
 
       - name: Log in to the Container registry
