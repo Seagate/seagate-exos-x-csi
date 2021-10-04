@@ -1,8 +1,9 @@
 name: Publish a Docker Image
 
 on:
-  push:
-    branches: ['main']
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
 
 env:
   REGISTRY: ghcr.io
@@ -33,7 +34,7 @@ jobs:
           make bin
 
       - name: Log in to the Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
