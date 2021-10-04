@@ -1,3 +1,9 @@
+## [1.0.6](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.5...v1.0.6) (2021-10-04)
+
+### Chores
+
+- multi step build driver image step ([c64e84c](https://github.com/Seagate/seagate-exos-x-csi/commit/c64e84c160a068291ece316e23c1b6a3e3fb7659))
+
 ## [1.0.5](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.4...v1.0.5) (2021-10-04)
 
 ### Chores
