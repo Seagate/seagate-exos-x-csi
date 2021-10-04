@@ -1,3 +1,13 @@
+## [1.0.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.2...v1.0.3) (2021-10-04)
+
+### Chores
+
+- add publish workflow ([5c45073](https://github.com/Seagate/seagate-exos-x-csi/commit/5c450738b75e2b953a9653f3e6cba3ee9a5caafb))
+
+### Other
+
+- Merge branch 'main' of github.com:Seagate/seagate-exos-x-csi into main ([7374583](https://github.com/Seagate/seagate-exos-x-csi/commit/73745837bb422bf9c210f90ebdb9815d5546dde3))
+
 ## [1.0.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.1...v1.0.2) (2021-10-03)
 
 ### Chores
