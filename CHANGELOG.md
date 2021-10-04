@@ -1,3 +1,9 @@
+## [1.0.5](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.4...v1.0.5) (2021-10-04)
+
+### Chores
+
+- retrieve latest release for publish ([c904ea7](https://github.com/Seagate/seagate-exos-x-csi/commit/c904ea70d7db878dbc837ef8f6b2b55c5912d93f))
+
 ## [1.0.4](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.3...v1.0.4) (2021-10-04)
 
 ### Chores
