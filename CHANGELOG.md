@@ -1,3 +1,13 @@
+## [1.0.4](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.3...v1.0.4) (2021-10-04)
+
+### Chores
+
+- corrections to allow CD publish ([19a6267](https://github.com/Seagate/seagate-exos-x-csi/commit/19a6267f8b49e37518e209b050b07caf9f6d44e8))
+
+### Other
+
+- Merge branch 'main' of github.com:Seagate/seagate-exos-x-csi into main ([433eef0](https://github.com/Seagate/seagate-exos-x-csi/commit/433eef0b9217d0dbb367c7f75ad322d8ded0e7aa))
+
 ## [1.0.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.2...v1.0.3) (2021-10-04)
 
 ### Chores
