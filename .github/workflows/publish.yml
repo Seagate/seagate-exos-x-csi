@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build driver images
+        run: export VERSION=${{ github.event.release.tag_name }}
         run: make bin
 
       - name: Log in to the Container registry
