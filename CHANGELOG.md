@@ -1,3 +1,9 @@
+## [1.0.7](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.6...v1.0.7) (2021-10-04)
+
+### Chores
+
+- add login action ([8129575](https://github.com/Seagate/seagate-exos-x-csi/commit/8129575c49a2be158c5f0695ba9aec43ad907250))
+
 ## [1.0.6](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.5...v1.0.6) (2021-10-04)
 
 ### Chores
