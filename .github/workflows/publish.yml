@@ -66,4 +66,4 @@ jobs:
 
       - name: Inspect
         run: |
-          docker image inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.fetch-latest-release.outputs.latest-release }}
+          docker image inspect ${{ env.REGISTRY }}/${{ steps.imagelc.outputs.lowercase }}:${{ steps.fetch-latest-release.outputs.latest-release }}
