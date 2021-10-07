@@ -1,9 +1,6 @@
 # go dependencies
 /vendor
 
-# test cluster config
-test/.env
-
 # v1.x files
 _legacy
 
@@ -18,3 +15,7 @@ seagate-exos-x-csi-controller
 .vscode/
 
 node_modules/
+
+# test files
+test/secrets.yml
+test/volume.yml

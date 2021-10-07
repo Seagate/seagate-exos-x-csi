@@ -1,0 +1,56 @@
+#! /usr/bin/env bash
+
+echo ""
+echo "[] sanity-cli"
+
+secretsTemplate="secrets.template.yml"
+secrets="secrets.yml"
+volumeTemplate="volume.template.yml"
+volume="volume.yml"
+
+set -e
+
+function pause()
+{
+    echo ""
+    read -s -n 1 -p "===== Press any key to contine ====="
+    echo ""
+}
+
+function setup {
+	cd $(dirname $0)
+	set -a; . .env; set +a
+
+    echo ""
+
+	envsubst < ${secretsTemplate} > ${secrets}
+    echo "===== ${secrets} ====="
+    cat ${secrets}
+    echo "===== END ====="
+
+    echo ""
+
+	envsubst < ${volumeTemplate} > ${volume}
+    echo "===== ${volume} ====="
+    cat ${volume}
+    echo "===== END ====="
+}
+
+setup
+pause
+
+controller=unix:///var/run/csi-exos-x.seagate.com/csi-controller.sock
+node=unix:///var/run/csi-exos-x.seagate.com/csi-node.sock
+sanity=/home/seagate/github.com/kubernetes-csi/csi-test/cmd/csi-sanity/csi-sanity
+focus="CreateVolume"
+focus="DeleteVolume"
+focus=""
+
+echo ""
+echo "[] csi-sanity"
+echo "sudo ${sanity} -csi.controllerendpoint ${controller} -csi.endpoint ${node} -csi.secrets ${secrets} -ginkgo.focus \"${focus}\" -csi.testvolumeparameters ${volume} -ginkgo.failFast > sanity.log"
+sudo ${sanity} -csi.controllerendpoint ${controller} -csi.endpoint ${node} -csi.secrets ${secrets} -ginkgo.focus "${focus}" -csi.testvolumeparameters ${volume} -ginkgo.failFast > sanity.log 
+
+out=$?
+
+exit ${out}
