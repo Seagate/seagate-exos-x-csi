@@ -1,0 +1,2 @@
+pool: $TEST_POOL
+fsType: $TEST_FSTYPE
