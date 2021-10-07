@@ -1,3 +1,13 @@
+## [1.0.9](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.8...v1.0.9) (2021-10-07)
+
+### Chores
+
+- correct workflow error using run and uses ([4ca7c52](https://github.com/Seagate/seagate-exos-x-csi/commit/4ca7c523753e4d879a1b182be40ba119f3a0943b))
+
+### Other
+
+- Merge branch 'main' of github.com:Seagate/seagate-exos-x-csi into main ([d025e00](https://github.com/Seagate/seagate-exos-x-csi/commit/d025e0017deb5bbe1ab33da576fc85f337b57479))
+
 ## [1.0.8](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.7...v1.0.8) (2021-10-07)
 
 ### Chores
