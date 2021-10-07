@@ -48,10 +48,17 @@ jobs:
 
       - name: Build and Push Docker Image
         id: docker_build
+        run: echo "registry is ${{ env.REGISTRY }}"
+        run: echo "image is ${{ env.IMAGE_NAME }}"
+        run: echo "version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
         uses: docker/build-push-action@v2
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.fetch-latest-release.outputs.latest-release }}
           labels: ${{ steps.meta.outputs.labels }}
           file: Dockerfile.ubi
+
+      - name: Inspect
+        run: |
+          docker image inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.fetch-latest-release.outputs.latest-release }}
