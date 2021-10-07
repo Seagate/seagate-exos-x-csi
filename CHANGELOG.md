@@ -1,3 +1,9 @@
+## [1.0.11](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.10...v1.0.11) (2021-10-07)
+
+### Chores
+
+- correct docker inspect step to use all lowercase for image name ([ade61cb](https://github.com/Seagate/seagate-exos-x-csi/commit/ade61cbec9b5deb5a6ea04ecb695b0966d8f2f85))
+
 ## [1.0.10](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.9...v1.0.10) (2021-10-07)
 
 ### Chores
