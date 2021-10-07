@@ -1,3 +1,9 @@
+## [1.0.10](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.9...v1.0.10) (2021-10-07)
+
+### Chores
+
+- use all lowercase for image name ([8cb5fbd](https://github.com/Seagate/seagate-exos-x-csi/commit/8cb5fbdf6ebc412cbdb0241e407e0d59fcf5a569))
+
 ## [1.0.9](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.8...v1.0.9) (2021-10-07)
 
 ### Chores
