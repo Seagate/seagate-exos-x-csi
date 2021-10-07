@@ -24,8 +24,16 @@ jobs:
         id: fetch-latest-release
         uses: reloc8/action-latest-release-version@1.0.0
 
+      - name: Lowercase
+        id: imagelc
+        uses: ASzc/change-string-case-action@v1
+        with:
+          string: ${{ github.repository }}
+
       - name: Output
-        run: echo "released version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
+        run: |
+          echo "released version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
+          echo "image name is ${{ steps.imagelc.outputs.lowercase }}"
 
       - name: Build driver images
         run: |
@@ -44,7 +52,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.imagelc.outputs.lowercase }}
 
       - name: Build and Push Docker Image
         id: docker_build
@@ -52,7 +60,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.fetch-latest-release.outputs.latest-release }}
+          tags: ${{ env.REGISTRY }}/${{ steps.imagelc.outputs.lowercase }}:${{ steps.fetch-latest-release.outputs.latest-release }}
           labels: ${{ steps.meta.outputs.labels }}
           file: Dockerfile.ubi
 
