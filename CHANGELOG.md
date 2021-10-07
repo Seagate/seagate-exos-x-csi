@@ -1,3 +1,18 @@
+## [1.0.8](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.7...v1.0.8) (2021-10-07)
+
+### Chores
+
+- correct version used for workflow Build and Push Docker Image, add Inspect step ([143fece](https://github.com/Seagate/seagate-exos-x-csi/commit/143fece6a6254c3fcdae65e7b6c2f214682ff875))
+
+### Other
+
+- Merge pull request #26 from Seagate/test/csi-sanity ([c0cdaff](https://github.com/Seagate/seagate-exos-x-csi/commit/c0cdaff63730a5a049f8b4b1fef121a7192e6d50)), closes [#26](https://github.com/Seagate/seagate-exos-x-csi/issues/26)
+
+### Tests
+
+- moved simple test app to its own folder ([bb1bd2d](https://github.com/Seagate/seagate-exos-x-csi/commit/bb1bd2dabaf65d3e21ed2aac00e03b01b074566d))
+- new command line script for running csi-sanity ([8b7d14b](https://github.com/Seagate/seagate-exos-x-csi/commit/8b7d14b54e45530f731c65629c6fc1d74c6ecb5f))
+
 ## [1.0.7](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.6...v1.0.7) (2021-10-04)
 
 ### Chores
