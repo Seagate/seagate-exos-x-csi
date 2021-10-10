@@ -1,3 +1,9 @@
+## [1.0.12](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.11...v1.0.12) (2021-10-10)
+
+### Chores
+
+- publish helm package for seagate-exos-x-csi ([c3b9150](https://github.com/Seagate/seagate-exos-x-csi/commit/c3b9150e3832659a2fb2510924fde273b9b7b345))
+
 ## [1.0.11](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.10...v1.0.11) (2021-10-07)
 
 ### Chores
