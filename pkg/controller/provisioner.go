@@ -11,6 +11,17 @@ import (
 	"k8s.io/klog"
 )
 
+var (
+	volumeCaps = []csi.VolumeCapability_AccessMode{
+		{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+		{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+		},
+	}
+)
+
 // CreateVolume creates a new volume from the given request. The function is idempotent.
 func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 
@@ -22,6 +33,11 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 	if common.ValidateName(volumeID) == false {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
+	}
+
+	volumeCapabilities := req.GetVolumeCapabilities()
+	if err := isValidVolumeCapabilities(volumeCapabilities); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("CreateVolume Volume capabilities not valid: %v", err))
 	}
 
 	size := req.GetCapacityRange().GetRequiredBytes()
@@ -54,12 +70,21 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		}
 
 		if sourceID != "" {
-			_, _, err = controller.client.CopyVolume(sourceID, volumeID, parameters[common.PoolConfigKey])
+			_, apistatus, err2 := controller.client.CopyVolume(sourceID, volumeID, parameters[common.PoolConfigKey])
+			if err2 != nil {
+				klog.Infof("-- CopyVolume apistatus.ReturnCode %v", apistatus.ReturnCode)
+				if apistatus != nil && apistatus.ReturnCode == snapshotNotFoundErrorCode {
+					return nil, status.Errorf(codes.NotFound, "Snapshot source (%s) not found", sourceID)
+				} else {
+					return nil, err2
+				}
+			}
+
 		} else {
-			_, _, err = controller.client.CreateVolume(volumeID, sizeStr, parameters[common.PoolConfigKey], poolType)
-		}
-		if err != nil {
-			return nil, err
+			_, _, err2 := controller.client.CreateVolume(volumeID, sizeStr, parameters[common.PoolConfigKey], poolType)
+			if err2 != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -114,4 +139,29 @@ func getSizeStr(size int64) string {
 	}
 
 	return fmt.Sprintf("%dB", size)
+}
+
+// isValidVolumeCapabilities validates the given VolumeCapability array is valid
+func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
+	if len(volCaps) == 0 {
+		return fmt.Errorf("CreateVolume Volume capabilities must be provided")
+	}
+	hasSupport := func(cap *csi.VolumeCapability) error {
+		if blk := cap.GetBlock(); blk != nil {
+			return fmt.Errorf("driver only supports mount access type volume capability")
+		}
+		for _, c := range volumeCaps {
+			if c.GetMode() == cap.AccessMode.GetMode() {
+				return nil
+			}
+		}
+		return fmt.Errorf("driver does not support access mode %v", cap.AccessMode.GetMode())
+	}
+
+	for _, c := range volCaps {
+		if err := hasSupport(c); err != nil {
+			return err
+		}
+	}
+	return nil
 }

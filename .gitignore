@@ -19,3 +19,4 @@ node_modules/
 # test files
 test/secrets.yml
 test/volume.yml
+test/sanity.log

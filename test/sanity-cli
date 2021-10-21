@@ -34,17 +34,33 @@ function setup {
     echo "===== ${volume} ====="
     cat ${volume}
     echo "===== END ====="
+    pause
 }
 
+function setVariables()
+{
+    echo ""
+    echo "env variables:"
+
+    # export TEST_FOCUS=DeleteVolume
+    # export TEST_FOCUS=CreateVolume
+
+    test_focus=$TEST_FOCUS
+    if [ -z "$test_focus" ]
+    then
+        test_focus=
+    fi
+    echo "-- TEST_FOCUS = $test_focus"
+    pause
+}
+
+setVariables
 setup
-pause
 
 controller=unix:///var/run/csi-exos-x.seagate.com/csi-controller.sock
 node=unix:///var/run/csi-exos-x.seagate.com/csi-node.sock
 sanity=/home/seagate/github.com/kubernetes-csi/csi-test/cmd/csi-sanity/csi-sanity
-focus="CreateVolume"
-focus="DeleteVolume"
-focus=""
+focus=${test_focus}
 
 echo ""
 echo "[] csi-sanity"
