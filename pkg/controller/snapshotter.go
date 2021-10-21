@@ -69,6 +69,11 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 
 // DeleteSnapshot deletes a snapshot of the given volume
 func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+
+	if req.SnapshotId == "" {
+		return nil, status.Error(codes.InvalidArgument, "DeleteSnapshot snapshot id is required")
+	}
+
 	_, status, err := controller.client.DeleteSnapshot(req.SnapshotId)
 	if err != nil {
 		if status != nil && status.ReturnCode == snapshotNotFoundErrorCode {
