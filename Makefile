@@ -9,7 +9,7 @@ endif
 ifdef VERSION
 VERSION := $(VERSION)
 else
-VERSION := v0.6.0
+VERSION := v1.0.12
 endif
 
 VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
