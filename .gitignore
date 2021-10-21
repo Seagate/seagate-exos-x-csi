@@ -20,3 +20,4 @@ node_modules/
 test/secrets.yml
 test/volume.yml
 test/sanity.log
+test/.env

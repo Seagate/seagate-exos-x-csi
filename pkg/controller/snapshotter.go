@@ -23,11 +23,15 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 	parameters := req.GetParameters()
 	name, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "trnaslate snapshot name contains invalid characters")
 	}
 
 	if common.ValidateName(name) == false {
 		return nil, status.Error(codes.InvalidArgument, "snapshot name contains invalid characters")
+	}
+
+	if req.SourceVolumeId == "" {
+		return nil, status.Error(codes.InvalidArgument, "snapshot SourceVolumeId is not valid")
 	}
 
 	_, respStatus, err := controller.client.CreateSnapshot(req.SourceVolumeId, name)

@@ -28,7 +28,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	parameters := req.GetParameters()
 	volumeID, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "trnaslate volume name contains invalid characters")
 	}
 
 	if common.ValidateName(volumeID) == false {
