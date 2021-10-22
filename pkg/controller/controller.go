@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	storageapi "github.com/Seagate/seagate-exos-x-api-go"
@@ -215,8 +216,16 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	password := string(credentials[common.PasswordSecretKey])
 	apiAddr := string(credentials[common.APIAddressConfigKey])
 
-	if len(apiAddr) == 0 || len(username) == 0 || len(password) == 0 {
-		return status.Error(codes.InvalidArgument, "at least one field is missing in credentials secret")
+	if len(username) == 0 {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.UsernameSecretKey))
+	}
+
+	if len(password) == 0 {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.PasswordSecretKey))
+	}
+
+	if len(apiAddr) == 0 {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.APIAddressConfigKey))
 	}
 
 	klog.Infof("using API at address (%s)", apiAddr)

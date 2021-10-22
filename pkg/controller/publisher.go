@@ -26,6 +26,11 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, volumeName)
 
 	lun, err := driver.client.PublishVolume(volumeName, initiatorName)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &csi.ControllerPublishVolumeResponse{
 		PublishContext: map[string]string{"lun": lun},
 	}, err

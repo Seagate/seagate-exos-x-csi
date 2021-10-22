@@ -28,6 +28,9 @@ import (
 // ValidateName verifies that the string only includes spaces and printable UTF-8 characters except: " , < \
 func ValidateName(s string) bool {
 	klog.V(2).Infof("ValidateName %q", s)
+	if s == "" {
+		return false
+	}
 	for i := 0; i < len(s); i++ {
 		if s[i] == '"' || s[i] == ',' || s[i] == '<' || s[i] == '\\' {
 			return false
