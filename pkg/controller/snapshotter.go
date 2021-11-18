@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -39,7 +40,7 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 		return nil, err
 	}
 
-	response, _, err := controller.client.ShowSnapshots(name)
+	response, _, err := controller.client.ShowSnapshots(name, "")
 	if err != nil {
 		return nil, err
 	}
@@ -85,35 +86,68 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 	return &csi.DeleteSnapshotResponse{}, nil
 }
 
-// ListSnapshots list existing snapshots
+// ListSnapshots: list existing snapshots up to MaxEntries
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	response, _, err := controller.client.ShowSnapshots()
+	response, _, err := controller.client.ShowSnapshots(req.SnapshotId, req.SourceVolumeId)
 	if err != nil {
 		return nil, err
 	}
 
+	// StartingToken is an index from 1 to maximum, "" returns 0
+	startingToken, err := strconv.Atoi(req.StartingToken)
+	klog.V(2).Infof("ListSnapshots: MaxEntries=%v, StartingToken=%q|%d", req.MaxEntries, req.StartingToken, startingToken)
+
 	snapshots := []*csi.ListSnapshotsResponse_Entry{}
+	var count, total, next int32 = 0, 0, math.MaxInt32
+
 	for _, object := range response.Objects {
-		if object.Typ != "snapshots" {
-			continue
-		}
 
+		// Convert raw object into csi.Snapshot object
 		snapshot, err := newSnapshotFromResponse(&object)
-		if err != nil {
-			return nil, err
-		}
 
-		snapshots = append(snapshots, &csi.ListSnapshotsResponse_Entry{
-			Snapshot: snapshot,
-		})
+		// Only store snapshot objects
+		if err == nil {
+			total++
+			klog.V(2).Infof("snapshot[%d]: SnapshotId=%v, SourceVolumeId=%v", total, snapshot.SnapshotId, snapshot.SourceVolumeId)
+
+			// Filter entries if StartingToken is provided
+			if (req.StartingToken == "") || (req.StartingToken != "" && total >= int32(startingToken)) {
+
+				// Only add entries up to the maximum
+				if (req.MaxEntries == 0) || (count < req.MaxEntries) {
+					snapshots = append(snapshots, &csi.ListSnapshotsResponse_Entry{Snapshot: snapshot})
+					count++
+					klog.V(2).Infof("   added[%d]: SnapshotId=%v, SourceVolumeId=%v", count, snapshot.SnapshotId, snapshot.SourceVolumeId)
+				}
+				// When needed, store the next index which is returned to the caller
+				if (req.MaxEntries != 0) && (count == req.MaxEntries) && (next == math.MaxInt32) {
+					next = total + 1
+					klog.V(2).Infof("next=%v", next)
+				}
+			}
+		}
+	}
+
+	klog.V(2).Infof("ListSnapshots[%d]: %v", count, snapshots)
+
+	// Mark the next token if there are snapshot entries remaining
+	nextToken := ""
+	if (req.MaxEntries != 0) && (next <= total) {
+		nextToken = strconv.FormatInt(int64(next), 10)
+		klog.V(2).Infof("next=%v, nextToken=%q", next, nextToken)
 	}
 
 	return &csi.ListSnapshotsResponse{
-		Entries: snapshots,
+		Entries:   snapshots,
+		NextToken: nextToken,
 	}, nil
 }
 
 func newSnapshotFromResponse(object *storageapi.Object) (*csi.Snapshot, error) {
+	if object.Typ != "snapshots" {
+		return nil, fmt.Errorf("not a snapshot object, type is  %v", object.Typ)
+	}
+
 	properties, err := object.GetProperties("total-size-numeric", "name", "master-volume-name", "creation-date-time-numeric")
 	if err != nil {
 		return nil, fmt.Errorf("could not read snapshot %v", err)

@@ -64,7 +64,7 @@ type Controller struct {
 // DriverCtx contains data common to most calls
 type DriverCtx struct {
 	Credentials map[string]string
-	Parameters  *map[string]string
+	Parameters  map[string]string
 	VolumeCaps  *[]*csi.VolumeCapability
 }
 
@@ -89,7 +89,8 @@ func New() *Controller {
 		}),
 		func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 			driverContext := DriverCtx{}
-			if reqWithSecrets, ok := req.(common.WithSecrets); ok {
+			reqWithSecrets, ok := req.(common.WithSecrets)
+			if ok {
 				driverContext.Credentials = reqWithSecrets.GetSecrets()
 			}
 			if reqWithParameters, ok := req.(common.WithParameters); ok {
@@ -100,6 +101,9 @@ func New() *Controller {
 			}
 
 			err := controller.beginRoutine(&driverContext, info.FullMethod)
+			if err != nil {
+				klog.Infof("controller.beginRoutine error for req = %x", reqWithSecrets)
+			}
 			defer controller.endRoutine()
 			if err != nil {
 				return nil, err
@@ -248,14 +252,14 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	return err
 }
 
-func runPreflightChecks(parameters *map[string]string, capabilities *[]*csi.VolumeCapability) error {
+func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.VolumeCapability) error {
 	checkIfKeyExistsInConfig := func(key string) error {
 		if parameters == nil {
 			return nil
 		}
 
 		klog.V(2).Infof("checking for %s in storage class parameters", key)
-		_, ok := (*parameters)[key]
+		_, ok := parameters[key]
 		if !ok {
 			return status.Errorf(codes.InvalidArgument, "'%s' is missing from configuration", key)
 		}
