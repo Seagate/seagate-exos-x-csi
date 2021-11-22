@@ -44,6 +44,7 @@ func ValidateName(s string) bool {
 // TranslateName converts the passed in volume name to the translated volume name
 func TranslateName(name, prefix string) (string, error) {
 
+	klog.V(2).Infof("TranslateName VolumeNameMaxLength=%d name=[%d]%q prefix=[%d]%q", VolumeNameMaxLength, len(name), name, len(prefix), prefix)
 	volumeID := name
 
 	if len(prefix) == 0 {
@@ -58,7 +59,10 @@ func TranslateName(name, prefix string) (string, error) {
 				volumeID = volumeID[9:]
 			}
 			volumeID = strings.ReplaceAll(volumeID, "-", "")
-			volumeID = volumeID[:VolumeNameMaxLength]
+			klog.V(2).Infof("volumeID=[%d]%q", len(volumeID), volumeID)
+			if len(volumeID) > VolumeNameMaxLength {
+				volumeID = volumeID[:VolumeNameMaxLength]
+			}
 		}
 	} else {
 		// Skip over 'pvc-' and remove all dashes

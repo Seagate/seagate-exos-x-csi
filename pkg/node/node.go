@@ -223,13 +223,13 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 // NodeUnpublishVolume unmounts the volume from the target path
 func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
 	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with empty id")
+		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty volume id")
 	}
 	if len(req.GetTargetPath()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume at an empty path")
+		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty target path")
 	}
 
-	klog.Infof("unpublishing volume %s", req.GetVolumeId())
+	klog.Infof("unpublishing volume %s at target path %s", req.GetVolumeId(), req.GetTargetPath())
 
 	_, err := os.Stat(req.GetTargetPath())
 	if err == nil {
@@ -294,10 +294,23 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 
 // NodeExpandVolume finalizes volume expansion on the node
 func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	iscsiInfoPath := node.getIscsiInfoPath(req.GetVolumeId())
+
+	volumeid := req.GetVolumeId()
+	if len(volumeid) == 0 {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume id"))
+	}
+
+	volumepath := req.GetVolumePath()
+	if len(volumepath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume path"))
+	}
+
+	iscsiInfoPath := node.getIscsiInfoPath(volumeid)
 	connector, err := iscsi.GetConnectorFromFile(iscsiInfoPath)
+	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeid, connector, err)
+
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("node expand volume path not found for volume id (%s)", volumeid))
 	}
 
 	// TODO: Is a rescan needed - rescan a scsi device by writing 1 in /sys/class/scsi_device/h:c:t:l/device/rescan
