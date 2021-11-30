@@ -1,3 +1,34 @@
+## [1.0.12](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.11...v1.0.12) (2021-11-30)
+
+### Bug Fixes
+
+- code adjustments to pass csi-sanity ListSnapshots tests ([e2d4142](https://github.com/Seagate/seagate-exos-x-csi/commit/e2d41428cfc49bdb478037d5a33d11078a3cd9d5))
+- Final changes for passing csi-sanity test suites ([e43f096](https://github.com/Seagate/seagate-exos-x-csi/commit/e43f096653b82ec2dfb740d3146a9ba66ae98b03))
+- Final changes for passing csi-sanity test suites, v1.0.13 ([f328117](https://github.com/Seagate/seagate-exos-x-csi/commit/f3281171f752c3051dccda62b4432f8c764fb501))
+
+### Chores
+
+- publish helm package for seagate-exos-x-csi ([c3b9150](https://github.com/Seagate/seagate-exos-x-csi/commit/c3b9150e3832659a2fb2510924fde273b9b7b345))
+- **release:** v1.0.12 ([5cae3a9](https://github.com/Seagate/seagate-exos-x-csi/commit/5cae3a9b9d8779fb8f79b747f63cae05e31cfbfd))
+- **release:** v1.0.12 ([0e7040c](https://github.com/Seagate/seagate-exos-x-csi/commit/0e7040c4700a3caccd03b7fcd70130b2f31d910c))
+- **release:** v1.0.12 ([9e23ca5](https://github.com/Seagate/seagate-exos-x-csi/commit/9e23ca550233125c4381ab29a2e5128236497e45))
+
+### Other
+
+- Merge pull request #30 from Seagate/test/csi-sanity-other ([e4472fa](https://github.com/Seagate/seagate-exos-x-csi/commit/e4472fa8d6eca5e391034d38c1084ad54c342378)), closes [#30](https://github.com/Seagate/seagate-exos-x-csi/issues/30)
+- Merge pull request #29 from Seagate/test/csi-sanity-other ([bc5c7b6](https://github.com/Seagate/seagate-exos-x-csi/commit/bc5c7b6508654a7163a0907fd11ff015fb89ec22)), closes [#29](https://github.com/Seagate/seagate-exos-x-csi/issues/29)
+- Merge pull request #28 from Seagate/test/csi-sanity-volumes ([0c300a2](https://github.com/Seagate/seagate-exos-x-csi/commit/0c300a2f6df80578209ede2558706f097c712a3d)), closes [#28](https://github.com/Seagate/seagate-exos-x-csi/issues/28)
+- correct release version in versions.yaml and makefile ([afbb348](https://github.com/Seagate/seagate-exos-x-csi/commit/afbb348e63604eaab889c6d8f891d09c31b8cac9))
+
+### Tests
+
+- correct .gitignore ([afaacd1](https://github.com/Seagate/seagate-exos-x-csi/commit/afaacd194f3e6925b06fe4f013d1a4df9bfda3e8))
+- correct ControllerPublishVolume csi-sanity issues ([53fa232](https://github.com/Seagate/seagate-exos-x-csi/commit/53fa232e95a3e36e3cf5e9c4ff4524044ad0ed52))
+- correct CreateSnapshot csi-sanity issues ([2b2c2e0](https://github.com/Seagate/seagate-exos-x-csi/commit/2b2c2e01e32d4fbea8fd2568c79834f5e9064e2e))
+- correct CreateVolume csi-sanity issues ([8818657](https://github.com/Seagate/seagate-exos-x-csi/commit/881865734f495e2aaa94f26668df4dfeb5e38f19))
+- correct DeleteSnapshot csi-sanity issues ([c799e4c](https://github.com/Seagate/seagate-exos-x-csi/commit/c799e4c41a78130c045431a488eedb959f070755))
+- csi-sanity minor test corrections ([3e9a8c0](https://github.com/Seagate/seagate-exos-x-csi/commit/3e9a8c03011bf9ecd40a7b6704a2bd46828c8a4f))
+
 ## [1.0.12](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.11...v1.0.12) (2021-11-22)
 
 ### Bug Fixes
