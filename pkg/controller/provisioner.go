@@ -89,7 +89,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	}
 
 	// Fill iSCSI context parameters
-	targetid, _ := controller.client.Info.GetTargetId()
+	targetid, _ := controller.client.Info.GetTargetId("iSCSI")
 	req.GetParameters()["iqn"] = targetid
 	portals, _ := controller.client.Info.GetPortals()
 	req.GetParameters()["portals"] = portals

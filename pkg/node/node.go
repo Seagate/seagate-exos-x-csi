@@ -58,6 +58,7 @@ func New() *Node {
 		"multipath",  // device mapping multipathing
 		"multipathd", // device mapping multipathing
 		"umount",     // unmount file systems
+		"dmsetup",    // device-mapper to remove/clean dm entries
 
 		// "blockdev",    // call block device ioctls from the command line
 		// "lsblk",       // list block devices
@@ -145,6 +146,7 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	}
 
 	klog.Infof("publishing volume %s", req.GetVolumeId())
+	klog.Infof("target path: %s", req.GetTargetPath())
 
 	iqn := req.GetVolumeContext()["iqn"]
 	portals := strings.Split(req.GetVolumeContext()["portals"], ",")
@@ -156,10 +158,13 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	klog.Info("initiating ISCSI connection...")
 	targets := make([]iscsi.TargetInfo, 0)
 	for _, portal := range portals {
-		targets = append(targets, iscsi.TargetInfo{
-			Iqn:    iqn,
-			Portal: portal,
-		})
+		if portal != "" {
+			klog.V(1).Infof("-- add iqn (%v) portal (%v)", iqn, portal)
+			targets = append(targets, iscsi.TargetInfo{
+				Iqn:    iqn,
+				Portal: portal,
+			})
+		}
 	}
 	connector := iscsi.Connector{
 		Targets:     targets,
@@ -236,7 +241,7 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 		klog.Infof("unmounting volume at %s", req.GetTargetPath())
 		out, err := exec.Command("mountpoint", req.GetTargetPath()).CombinedOutput()
 		if err == nil {
-			out, err := exec.Command("umount", req.GetTargetPath()).CombinedOutput()
+			out, err := exec.Command("umount", "-l", req.GetTargetPath()).CombinedOutput()
 			if err != nil {
 				return nil, status.Error(codes.Internal, string(out))
 			}
@@ -296,11 +301,13 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
 
 	volumeid := req.GetVolumeId()
+	volumepath := req.GetVolumePath()
+	klog.V(2).Infof("NodeExpandVolume: VolumeId=%v,  VolumePath=%v", volumeid, volumepath)
+
 	if len(volumeid) == 0 {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume id"))
 	}
 
-	volumepath := req.GetVolumePath()
 	if len(volumepath) == 0 {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume path"))
 	}
@@ -327,9 +334,10 @@ func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 		klog.V(2).Info("device is NOT using multipath")
 	}
 
-	klog.Infof("expanding filesystem on device %s", connector.DevicePath)
+	klog.Infof("expanding filesystem using resize2fs on device %s", connector.DevicePath)
 	output, err := exec.Command("resize2fs", connector.DevicePath).CombinedOutput()
 	if err != nil {
+		klog.V(2).Info("could not resize filesystem: %v", output)
 		return nil, fmt.Errorf("could not resize filesystem: %v", output)
 	}
 
@@ -368,8 +376,6 @@ func (node *Node) getIscsiInfoPath(volumeID string) string {
 }
 
 func checkHostBinary(name string) error {
-	klog.V(5).Infof("checking that binary %q exists in host PATH", name)
-
 	if path, err := exec.LookPath(name); err != nil {
 		return fmt.Errorf("binary %q not found", name)
 	} else {
@@ -403,7 +409,7 @@ func findDeviceFormat(device string) (string, error) {
 		err = errors.New("command timed out after 2 seconds")
 	}
 
-	klog.V(2).Infof("blkid output: %q,", output)
+	klog.V(2).Infof("blkid output: %q, err=%v", output, err)
 
 	if err != nil {
 		// blkid exit with code 2 if the specified token (TYPE/PTTYPE, etc) could not be found or if device could not be identified.
