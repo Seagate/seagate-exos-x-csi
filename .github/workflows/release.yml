@@ -23,9 +23,6 @@ jobs:
         release-branches: '["main"]'
         disable-changelog: false
 
-    - name: Fetch latest release version
-      id: fetch-latest-release
-      uses: reloc8/action-latest-release-version@1.0.0
-
     - name: Output
-      run: echo "released version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
+      run: echo "released version is ${{ steps.build_package.outputs.version }}, type is ${{ steps.build_package.outputs.level }}"
+

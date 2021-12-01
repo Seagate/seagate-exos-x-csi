@@ -1,15 +1,10 @@
 {
   "name": "seagate-exos-x-csi",
-  "version": "1.0.0",
+  "version": "0.0.0-development",
   "description": "Seagate Exos X CSI Driver",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "example": "example",
-    "test": "test"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "semantic-release": "semantic-release"
   },
   "repository": {
     "type": "git",
@@ -22,11 +17,6 @@
   },
   "homepage": "https://github.com/Seagate/seagate-exos-x-csi#readme",
   "devDependencies": {
-    "cz-conventional-changelog": "^3.3.0"
-  },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
+    "semantic-release": "^18.0.0"
   }
 }
