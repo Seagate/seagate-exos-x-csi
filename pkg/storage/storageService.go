@@ -41,7 +41,8 @@ type fcStorage struct {
 }
 
 type iscsiStorage struct {
-	cs commonService
+	cs            commonService
+	iscsiInfoPath string
 }
 
 type sasStorage struct {
@@ -49,18 +50,16 @@ type sasStorage struct {
 }
 
 // buildCommonService:
-func buildCommonService(config map[string]string, secretMap map[string]string) (commonService, error) {
+func buildCommonService(config map[string]string) (commonService, error) {
 	commonserv := commonService{}
-	if config != nil {
-		commonserv.driverVersion = config["driverversion"]
-	}
+	commonserv.driverVersion = config["driverversion"]
 	klog.V(2).Infof("buildCommonService commonservice configuration done.")
 	return commonserv, nil
 }
 
 //NewStorageNode : To return specific implementation of storage
-func NewStorageNode(storageProtocol string, configparams ...map[string]string) (StorageOperations, error) {
-	comnserv, err := buildCommonService(configparams[0], configparams[1])
+func NewStorageNode(storageProtocol string, config map[string]string) (StorageOperations, error) {
+	comnserv, err := buildCommonService(config)
 	if err == nil {
 		storageProtocol = strings.TrimSpace(storageProtocol)
 		klog.V(2).Infof("NewStorageNode for (%s)", storageProtocol)
@@ -69,7 +68,7 @@ func NewStorageNode(storageProtocol string, configparams ...map[string]string) (
 		} else if storageProtocol == "sas" {
 			return &sasStorage{cs: comnserv}, nil
 		} else if storageProtocol == "iscsi" {
-			return &iscsiStorage{cs: comnserv}, nil
+			return &iscsiStorage{cs: comnserv, iscsiInfoPath: config["iscsiInfoPath"]}, nil
 		}
 		return nil, errors.New(fmt.Sprintf("Error: Invalid storage protocol (%s)", storageProtocol))
 	}
