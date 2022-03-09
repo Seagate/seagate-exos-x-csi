@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: csi-sanity-crc
+spec:
+  restartPolicy: Never
+  containers:
+  - image: default-route-openshift-image-registry.apps-crc.testing/seagate/csi-sanity
+    command: ["./sanity-cli", "all"]
+    name: csi-sanity
+    securityContext:
+      privileged: true
+      allowPrivilegeEscalation: true
+    volumeMounts:
+      - name: controller-socket
+        mountPath: /csi/controller.sock
+      - name: node-socket
+        mountPath: /csi/node.sock
+      - name: sanity-logs
+        mountPath: /sanity-logs
+  volumes:
+    - name: controller-socket
+      hostPath:
+        path: /var/lib/kubelet/pods/{{CONTROLLER_POD_UID}}/volumes/kubernetes.io~empty-dir/socket-dir/csi.sock
+    - name: node-socket
+      hostPath:  
+        path: /var/lib/kubelet/plugins/csi-exos-x.seagate.com/csi.sock
+    - name: sanity-logs
+      persistentVolumeClaim:
+        claimName: sanity-logs
