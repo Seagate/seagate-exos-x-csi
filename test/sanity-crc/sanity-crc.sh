@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Launch cli sanity in a crc pod. Must be logged in with oc before running.
+# Usage: crc-sanity.sh
+#
+# Launch cli sanity in a crc pod. Must be logged in with oc before running. 
+# Runs all csi-sanity test cases
 
 secretsTemplate="../secrets.template.yml"
 secrets="secrets.yml"
@@ -58,5 +61,41 @@ oc delete pod csi-sanity-crc
 echo "===== Creating Sanity Pod ====="
 oc create -f sanity-crc.yaml
 
-echo "\nTest pod is starting! Once running, use 'oc logs csi-sanity-crc' to get sanity output"
+echo "Test pod is starting! Once running, use 'oc logs csi-sanity-crc' to get sanity output"
 
+counter=0
+success=0
+continue=1
+maxattempts=6
+
+while [ $continue ]
+do
+    echo ""
+    echo "Waiting for test pod to come online"
+
+    testpodstatus=$(oc get pod csi-sanity-crc -o=jsonpath='{.status.phase}' -n seagate)
+    echo $testpodstatus
+    if [ "$testpodstatus" == "Running" ]; then
+        echo "SUCCESS: test pod running"
+        success=1
+        break
+    fi
+
+    if [[ "$counter" -eq $maxattempts ]]; then
+        echo ""
+        echo "ERROR: Max attempts ($maxattempts) reached and test pod is not running."
+        echo ""
+        oc get pod csi-sanity-crc
+        break
+    else
+        sleep 5
+    fi
+
+    ((counter++))
+done
+
+log_output_file="csi-sanity.log"
+if [ "$success" -ne 0 ]; then
+    echo "csi sanity in progress, logs will be tailed to $log_output_file"
+    oc logs csi-sanity-crc -f > $log_output_file &
+fi
