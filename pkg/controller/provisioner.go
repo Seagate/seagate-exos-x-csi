@@ -31,6 +31,9 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		return nil, status.Error(codes.InvalidArgument, "trnaslate volume name contains invalid characters")
 	}
 
+	// Extract the storage interface protocol to be used for this volume (iscsi, fc, sas, etc)
+	storageProtocol := parameters[common.StorageProtocolKey]
+
 	if common.ValidateName(volumeID) == false {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
 	}
@@ -49,7 +52,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		poolType = "Virtual"
 	}
 
-	klog.Infof("creating volume %q (size %s) in pool %q [%s]", volumeID, sizeStr, pool, poolType)
+	klog.Infof("creating volume %q (size %s) pool %q [%s] using protocol (%s)", volumeID, sizeStr, pool, poolType, storageProtocol)
 
 	volumeExists, err := controller.client.CheckVolumeExists(volumeID, size)
 	if err != nil {
@@ -88,22 +91,27 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		}
 	}
 
-	// Fill iSCSI context parameters
-	targetid, _ := controller.client.Info.GetTargetId("iSCSI")
-	req.GetParameters()["iqn"] = targetid
-	portals, _ := controller.client.Info.GetPortals()
-	req.GetParameters()["portals"] = portals
+	if storageProtocol == common.StorageProtocolISCSI {
+		// Fill iSCSI context parameters
+		targetid, _ := controller.client.Info.GetTargetId("iSCSI")
+		req.GetParameters()["iqn"] = targetid
+		portals, _ := controller.client.Info.GetPortals()
+		req.GetParameters()["portals"] = portals
+	}
+
+	fullvolumeid := common.VolumeIdAugment(volumeID, storageProtocol)
 
 	volume := &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId:      volumeID,
+			VolumeId:      fullvolumeid,
 			VolumeContext: parameters,
 			CapacityBytes: req.GetCapacityRange().GetRequiredBytes(),
 			ContentSource: req.GetVolumeContentSource(),
 		},
 	}
 
-	klog.Infof("created volume %s (%s)", volumeID, sizeStr)
+	klog.Infof("created volume %s (%s)", fullvolumeid, sizeStr)
+
 	// Log struct with field names
 	klog.V(8).Infof("created volume %+v", volume)
 	return volume, nil
@@ -114,22 +122,23 @@ func (controller *Controller) DeleteVolume(ctx context.Context, req *csi.DeleteV
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot delete volume with empty ID")
 	}
+	volumename, _ := common.VolumeIdGetName(req.GetVolumeId())
+	klog.Infof("deleting volume %s", volumename)
 
-	klog.Infof("deleting volume %s", req.GetVolumeId())
-	_, respStatus, err := controller.client.DeleteVolume(req.GetVolumeId())
+	_, respStatus, err := controller.client.DeleteVolume(volumename)
 	if err != nil {
 		if respStatus != nil {
 			if respStatus.ReturnCode == volumeNotFoundErrorCode {
-				klog.Infof("volume %s does not exist, assuming it has already been deleted", req.GetVolumeId())
+				klog.Infof("volume %s does not exist, assuming it has already been deleted", volumename)
 				return &csi.DeleteVolumeResponse{}, nil
 			} else if respStatus.ReturnCode == volumeHasSnapshot {
-				return nil, status.Error(codes.FailedPrecondition, fmt.Sprintf("volume %s cannot be deleted since it has snapshots", req.GetVolumeId()))
+				return nil, status.Error(codes.FailedPrecondition, fmt.Sprintf("volume %s cannot be deleted since it has snapshots", volumename))
 			}
 		}
 		return nil, err
 	}
 
-	klog.Infof("successfully deleted volume %s", req.GetVolumeId())
+	klog.Infof("successfully deleted volume %s", volumename)
 	return &csi.DeleteVolumeResponse{}, nil
 }
 

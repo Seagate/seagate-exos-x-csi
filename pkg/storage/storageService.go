@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"k8s.io/klog"
 )
@@ -63,11 +64,11 @@ func NewStorageNode(storageProtocol string, config map[string]string) (StorageOp
 	if err == nil {
 		storageProtocol = strings.TrimSpace(storageProtocol)
 		klog.V(2).Infof("NewStorageNode for (%s)", storageProtocol)
-		if storageProtocol == "fc" {
+		if storageProtocol == common.StorageProtocolFC {
 			return &fcStorage{cs: comnserv}, nil
-		} else if storageProtocol == "sas" {
+		} else if storageProtocol == common.StorageProtocolSAS {
 			return &sasStorage{cs: comnserv}, nil
-		} else if storageProtocol == "iscsi" {
+		} else if storageProtocol == common.StorageProtocolISCSI {
 			return &iscsiStorage{cs: comnserv, iscsiInfoPath: config["iscsiInfoPath"]}, nil
 		}
 		return nil, errors.New(fmt.Sprintf("Error: Invalid storage protocol (%s)", storageProtocol))

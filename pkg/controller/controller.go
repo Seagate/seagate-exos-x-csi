@@ -148,14 +148,15 @@ func (controller *Controller) ControllerGetCapabilities(ctx context.Context, req
 // ValidateVolumeCapabilities checks whether the volume capabilities requested
 // are supported.
 func (controller *Controller) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
-	volumeID := req.GetVolumeId()
-	if len(volumeID) == 0 {
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+
+	if len(volumeName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot validate volume with empty ID")
 	}
 	if len(req.GetVolumeCapabilities()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot validate volume without capabilities")
 	}
-	_, _, err := controller.client.ShowVolumes(volumeID)
+	_, _, err := controller.client.ShowVolumes(volumeName)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "cannot validate volume not found")
 	}

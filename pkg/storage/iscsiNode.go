@@ -64,7 +64,8 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
 	}
 
-	klog.Infof("publishing volume %s", req.GetVolumeId())
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	klog.Infof("publishing volume %s", volumeName)
 	klog.Infof("target path: %s", req.GetTargetPath())
 
 	iqn := req.GetVolumeContext()["iqn"]
@@ -152,7 +153,8 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty target path")
 	}
 
-	klog.Infof("unpublishing volume %s at target path %s", req.GetVolumeId(), req.GetTargetPath())
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	klog.Infof("unpublishing volume %s at target path %s", volumeName, req.GetTargetPath())
 
 	_, err := os.Stat(req.GetTargetPath())
 	if err == nil {
@@ -223,11 +225,11 @@ func (iscsi *iscsiStorage) NodeGetVolumeStats(ctx context.Context, req *csi.Node
 // NodeExpandVolume finalizes volume expansion on the node
 func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
 
-	volumeid := req.GetVolumeId()
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	volumepath := req.GetVolumePath()
-	klog.V(2).Infof("NodeExpandVolume: VolumeId=%v,  VolumePath=%v", volumeid, volumepath)
+	klog.V(2).Infof("NodeExpandVolume: VolumeId=%v,  VolumePath=%v", volumeName, volumepath)
 
-	if len(volumeid) == 0 {
+	if len(volumeName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume id"))
 	}
 
@@ -236,10 +238,10 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 	}
 
 	connector, err := iscsilib.GetConnectorFromFile(iscsi.iscsiInfoPath)
-	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeid, connector, err)
+	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeName, connector, err)
 
 	if err != nil {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("node expand volume path not found for volume id (%s)", volumeid))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("node expand volume path not found for volume id (%s)", volumeName))
 	}
 
 	// TODO: Is a rescan needed - rescan a scsi device by writing 1 in /sys/class/scsi_device/h:c:t:l/device/rescan

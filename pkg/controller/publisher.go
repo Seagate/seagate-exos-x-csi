@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,7 +22,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
 	}
 
-	volumeName := req.GetVolumeId()
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	initiatorName := req.GetNodeId()
 	klog.Infof("attach request for initiator %s, volume id: %s", initiatorName, volumeName)
 
@@ -42,8 +43,9 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with empty ID")
 	}
 
-	klog.Infof("unmapping volume %s from initiator %s", req.GetVolumeId(), req.GetNodeId())
-	_, status, err := driver.client.UnmapVolume(req.GetVolumeId(), req.GetNodeId())
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	klog.Infof("unmapping volume %s from initiator %s", volumeName, req.GetNodeId())
+	_, status, err := driver.client.UnmapVolume(volumeName, req.GetNodeId())
 	if err != nil {
 		if status != nil && status.ReturnCode == unmapFailedErrorCode {
 			klog.Info("unmap failed, assuming volume is already unmapped")
@@ -53,6 +55,6 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 		return nil, err
 	}
 
-	klog.Infof("successfully unmapped volume %s from all initiators", req.GetVolumeId())
+	klog.Infof("successfully unmapped volume %s from all initiators", volumeName)
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }

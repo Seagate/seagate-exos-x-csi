@@ -19,6 +19,7 @@
 package common
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 
@@ -94,4 +95,34 @@ func TranslateName(name, prefix string) (string, error) {
 	klog.Infof("TranslateName %q[%d], prefix %q[%d], result %q[%d]", name, len(name), prefix, len(prefix), volumeID, len(volumeID))
 
 	return volumeID, nil
+}
+
+// VolumeIdGetName: Decode the augmented volume identifier and return the name only
+func VolumeIdGetName(volumeid string) (string, error) {
+	tokens := strings.Split(volumeid, AugmentKey)
+
+	if len(tokens) > 0 {
+		return tokens[0], nil
+	} else {
+		return "", fmt.Errorf("Unable to retrieve volume name from (%s)", volumeid)
+	}
+}
+
+// VolumeIdGetStorageProtocol: Decode the augmented volume identifier and return the storage protocol only
+func VolumeIdGetStorageProtocol(volumeid string) (string, error) {
+	tokens := strings.Split(volumeid, AugmentKey)
+
+	if len(tokens) > 1 {
+		return tokens[1], nil
+	} else {
+		return "", fmt.Errorf("Unable to retrieve storage protocol from (%s)", volumeid)
+	}
+}
+
+// VolumeIdAugment: Extend the volume name by augmenting it with storage protocol
+func VolumeIdAugment(volumename, storageprotocol string) string {
+
+	volumeid := volumename + AugmentKey + storageprotocol
+	klog.V(2).Infof("VolumeIdAugment: %s", volumeid)
+	return volumeid
 }

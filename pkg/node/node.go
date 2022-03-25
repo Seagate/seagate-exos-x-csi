@@ -133,13 +133,17 @@ func (node *Node) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapab
 // NodePublishVolume mounts the volume mounted to the staging path to the target path
 func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 
-	klog.Infof("NodePublishVolume called with volume name %s", req.GetVolumeId())
+	// Extract the volume name and the storage protocol from the augmented volume id
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	storagePorotcol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
-	storagePorotcol := req.GetVolumeContext()[common.StorageProtocolKey]
+	klog.Infof("NodePublishVolume called with volume name %s", volumeName)
 
 	config := make(map[string]string)
-	config["iscsiInfoPath"] = node.getIscsiInfoPath(req.GetVolumeId())
-	klog.V(2).Infof("NodePublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
+	if storagePorotcol == common.StorageProtocolISCSI {
+		config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
+		klog.V(2).Infof("NodePublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
+	}
 
 	// Get storage handler
 	storageNode, err := storage.NewStorageNode(storagePorotcol, config)
@@ -154,15 +158,14 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 // NodeUnpublishVolume unmounts the volume from the target path
 func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
 
-	klog.Infof("NodeUnpublishVolume volume %s at target path %s", req.GetVolumeId(), req.GetTargetPath())
+	// Extract the volume name and the storage protocol from the augmented volume id
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	storagePorotcol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
-	// TODO: This csi request message does not provide any coontext for passing the storage protocol.
-	// Need to find a way to track the storage call per VolumeId, or through Context
-	// One solution discovered is to use VolumeId$$StorageProtocol - adding storage protocol string to VolumeId
-	storagePorotcol := "iscsi"
+	klog.Infof("NodeUnpublishVolume volume %s at target path %s", volumeName, req.GetTargetPath())
 
 	config := make(map[string]string)
-	config["iscsiInfoPath"] = node.getIscsiInfoPath(req.GetVolumeId())
+	config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
 	klog.V(2).Infof("NodeUnpublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
 
 	// Get storage handler
@@ -178,15 +181,14 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 // NodeExpandVolume finalizes volume expansion on the node
 func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
 
-	klog.Infof("NodeExpandVolume volume %s at volume path %s", req.GetVolumeId(), req.GetVolumePath())
+	// Extract the volume name and the storage protocol from the augmented volume id
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	storagePorotcol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
-	// TODO: This csi request message does not provide any coontext for passing the storage protocol.
-	// Need to find a way to track the storage call per VolumeId, or through Context
-	// One solution discovered is to use VolumeId$$StorageProtocol - adding storage protocol string to VolumeId
-	storagePorotcol := "iscsi"
+	klog.Infof("NodeExpandVolume volume %s at volume path %s", volumeName, req.GetVolumePath())
 
 	config := make(map[string]string)
-	config["iscsiInfoPath"] = node.getIscsiInfoPath(req.GetVolumeId())
+	config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
 	klog.V(2).Infof("NodeExpandVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
 
 	// Get storage handler
