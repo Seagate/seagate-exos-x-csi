@@ -19,8 +19,6 @@
 package storage
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -70,8 +68,11 @@ func NewStorageNode(storageProtocol string, config map[string]string) (StorageOp
 			return &sasStorage{cs: comnserv}, nil
 		} else if storageProtocol == common.StorageProtocolISCSI {
 			return &iscsiStorage{cs: comnserv, iscsiInfoPath: config["iscsiInfoPath"]}, nil
+		} else {
+			klog.Warningf("Invalid or no storage protocol specified (%s)", storageProtocol)
+			klog.Warningf("Expecting storageProtocol (iscsi, fc, sas, etc) in StorageClass YAML. Default of (%s) used.", common.StorageProtocolISCSI)
+			return &iscsiStorage{cs: comnserv, iscsiInfoPath: config["iscsiInfoPath"]}, nil
 		}
-		return nil, errors.New(fmt.Sprintf("Error: Invalid storage protocol (%s)", storageProtocol))
 	}
 	return nil, err
 }
