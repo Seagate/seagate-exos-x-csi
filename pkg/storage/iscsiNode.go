@@ -37,6 +37,11 @@ import (
 	"k8s.io/klog"
 )
 
+// Configuration constants
+const (
+	BlkidTimeout = 10
+)
+
 // NodeStageVolume mounts the volume to a staging path on the node. This is
 // called by the CO before NodePublishVolume and is used to temporary mount the
 // volume to a staging path. Once mounted, NodePublishVolume will make sure to
@@ -291,7 +296,7 @@ func checkFs(path string) error {
 func findDeviceFormat(device string) (string, error) {
 	klog.V(2).Infof("Trying to find filesystem format on device %q", device)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), BlkidTimeout*time.Second)
 	defer cancel()
 	output, err := exec.CommandContext(ctx, "blkid",
 		"-p",
@@ -301,7 +306,7 @@ func findDeviceFormat(device string) (string, error) {
 		device).CombinedOutput()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		err = errors.New("command timed out after 2 seconds")
+		err = fmt.Errorf("command timed out after %d seconds", BlkidTimeout)
 	}
 
 	klog.V(2).Infof("blkid output: %q, err=%v", output, err)
