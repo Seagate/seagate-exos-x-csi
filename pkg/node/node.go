@@ -135,24 +135,24 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 
 	// Extract the volume name and the storage protocol from the augmented volume id
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-	storagePorotcol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
+	storageProtocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
 	klog.Infof("NodePublishVolume called with volume name %s", volumeName)
 
 	config := make(map[string]string)
-	if storagePorotcol == common.StorageProtocolISCSI {
+	if storageProtocol == common.StorageProtocolISCSI {
 		config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
 		klog.V(2).Infof("NodePublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
 	}
 
 	// Get storage handler
-	storageNode, err := storage.NewStorageNode(storagePorotcol, config)
+	storageNode, err := storage.NewStorageNode(storageProtocol, config)
 	if storageNode != nil {
 		return storageNode.NodePublishVolume(ctx, req)
 	}
 
-	klog.Errorf("NodePublishVolume error for storage protocol (%v): %v", storagePorotcol, err)
-	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storagePorotcol)
+	klog.Errorf("NodePublishVolume error for storage protocol (%v): %v", storageProtocol, err)
+	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storageProtocol)
 }
 
 // NodeUnpublishVolume unmounts the volume from the target path
@@ -160,7 +160,7 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 
 	// Extract the volume name and the storage protocol from the augmented volume id
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-	storagePorotcol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
+	storageProtocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
 	klog.Infof("NodeUnpublishVolume volume %s at target path %s", volumeName, req.GetTargetPath())
 
@@ -169,13 +169,13 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 	klog.V(2).Infof("NodeUnpublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
 
 	// Get storage handler
-	storageNode, err := storage.NewStorageNode(storagePorotcol, config)
+	storageNode, err := storage.NewStorageNode(storageProtocol, config)
 	if storageNode != nil {
 		return storageNode.NodeUnpublishVolume(ctx, req)
 	}
 
-	klog.Errorf("NodeUnpublishVolume error for storage protocol (%v): %v", storagePorotcol, err)
-	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storagePorotcol)
+	klog.Errorf("NodeUnpublishVolume error for storage protocol (%v): %v", storageProtocol, err)
+	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storageProtocol)
 }
 
 // NodeExpandVolume finalizes volume expansion on the node
@@ -183,7 +183,7 @@ func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 
 	// Extract the volume name and the storage protocol from the augmented volume id
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-	storagePorotcol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
+	storageProtocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
 	klog.Infof("NodeExpandVolume volume %s at volume path %s", volumeName, req.GetVolumePath())
 
@@ -192,13 +192,13 @@ func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 	klog.V(2).Infof("NodeExpandVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
 
 	// Get storage handler
-	storageNode, err := storage.NewStorageNode(storagePorotcol, config)
+	storageNode, err := storage.NewStorageNode(storageProtocol, config)
 	if storageNode != nil {
 		return storageNode.NodeExpandVolume(ctx, req)
 	}
 
-	klog.Errorf("NodeExpandVolume error for storage protocol (%v): %v", storagePorotcol, err)
-	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storagePorotcol)
+	klog.Errorf("NodeExpandVolume error for storage protocol (%v): %v", storageProtocol, err)
+	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storageProtocol)
 }
 
 // NodeGetVolumeStats return info about a given volume
