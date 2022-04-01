@@ -16,8 +16,8 @@ spec:
         mountPath: /csi/controller.sock
       - name: node-socket
         mountPath: /csi/node.sock
-      - name: sanity-logs
-        mountPath: /sanity-logs
+      - name: target-directory
+        mountPath: /tmp
   volumes:
     - name: controller-socket
       hostPath:
@@ -25,6 +25,6 @@ spec:
     - name: node-socket
       hostPath:  
         path: /var/lib/kubelet/plugins/csi-exos-x.seagate.com/csi.sock
-    - name: sanity-logs
-      persistentVolumeClaim:
-        claimName: sanity-logs
+    - name: target-directory
+      hostPath:
+        path: /tmp
