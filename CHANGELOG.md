@@ -1,3 +1,19 @@
+# [1.2.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.1.1...v1.2.0) (2022-04-07)
+
+### Features
+
+- **Storage:** Add use of augmented volume id to store volume name and storage protocol ([8355def](https://github.com/Seagate/seagate-exos-x-csi/commit/8355def4ecc13fef0209c59ca23c222f6fe1a8ce))
+- **Storage:** Adding new storage package to handle iscsi, fc, and sas ([839b683](https://github.com/Seagate/seagate-exos-x-csi/commit/839b68350cb0ad12d324fc24f84c47b766f36eaf))
+- **Storage:** iscsiNode implemented ([6255cc2](https://github.com/Seagate/seagate-exos-x-csi/commit/6255cc257f9a42d50c45c840d71e7bf192698853))
+- **Storage:** Rename to Node ([6d4edb4](https://github.com/Seagate/seagate-exos-x-csi/commit/6d4edb488d9de5e55b9c8bcb9a3a49a7b1556f62))
+- **Storage:** Spelling and naming corrections ([39e1709](https://github.com/Seagate/seagate-exos-x-csi/commit/39e17098ccaef5acf86bdbcf243cbddf292d79c1))
+- **Storage:** Switch the blkid command timeout to a constant, with value of 10s ([ff70aef](https://github.com/Seagate/seagate-exos-x-csi/commit/ff70aefe83a59449a74265806836d578759116b4))
+- **Storage:** Use iscsi for default storage protocol if not specified in StorageClass YAML ([340a694](https://github.com/Seagate/seagate-exos-x-csi/commit/340a6947c480d993ea0f852fca53681320aa2be4))
+
+### Other
+
+- Merge pull request #33 from Seagate/feat/storagei ([e33d829](https://github.com/Seagate/seagate-exos-x-csi/commit/e33d8299ca4b9172e3f6a4f0223290a5897d190f)), closes [#33](https://github.com/Seagate/seagate-exos-x-csi/issues/33)
+
 ## [1.1.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.1.0...v1.1.1) (2022-04-07)
 
 ### Chores
