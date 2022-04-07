@@ -1,3 +1,13 @@
+## [1.1.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.1.0...v1.1.1) (2022-04-07)
+
+### Chores
+
+- **deps:** bump minimist from 1.2.5 to 1.2.6 ([35e59b3](https://github.com/Seagate/seagate-exos-x-csi/commit/35e59b3525b62b5352b68380466be05346af1a52))
+
+### Other
+
+- Merge pull request #34 from Seagate/dependabot/npm_and_yarn/minimist-1.2.6 ([93a0e5c](https://github.com/Seagate/seagate-exos-x-csi/commit/93a0e5cb565831b0b05bb96f25ddebc73be93e8b)), closes [#34](https://github.com/Seagate/seagate-exos-x-csi/issues/34)
+
 # [1.1.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.0.11...v1.1.0) (2021-12-01)
 
 ### Bug Fixes
