@@ -23,6 +23,7 @@ const PluginName = "csi-exos-x.seagate.com"
 
 // Configuration constants
 const (
+	AugmentKey                = "##"
 	FsTypeConfigKey           = "fsType"
 	PoolConfigKey             = "pool"
 	APIAddressConfigKey       = "apiAddress"
@@ -30,6 +31,10 @@ const (
 	PasswordSecretKey         = "password"
 	StorageClassAnnotationKey = "storageClass"
 	VolumePrefixKey           = "volPrefix"
+	StorageProtocolKey        = "storageProtocol"
+	StorageProtocolISCSI      = "iscsi"
+	StorageProtocolFC         = "fc"
+	StorageProtocolSAS        = "sas"
 
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 32

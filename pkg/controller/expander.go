@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,11 +14,11 @@ import (
 
 // ControllerExpandVolume expands a volume to the given new size
 func (controller *Controller) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	volumeID := req.GetVolumeId()
-	if volumeID == "" {
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	if volumeName == "" {
 		return nil, status.Error(codes.InvalidArgument, "cannot expand a volume with an empty ID")
 	}
-	klog.Infof("expanding volume %q", volumeID)
+	klog.Infof("expanding volume %q", volumeName)
 
 	newSize := req.GetCapacityRange().GetRequiredBytes()
 	if newSize == 0 {
@@ -25,12 +26,12 @@ func (controller *Controller) ControllerExpandVolume(ctx context.Context, req *c
 	}
 	klog.V(2).Infof("requested size: %d bytes", newSize)
 
-	response, _, err := controller.client.ShowVolumes(volumeID)
+	response, _, err := controller.client.ShowVolumes(volumeName)
 	var expansionSize int64
 	if err != nil {
 		return nil, err
 	} else if volume, ok := response.ObjectsMap["volume"]; !ok {
-		return nil, fmt.Errorf("volume %q not found", volumeID)
+		return nil, fmt.Errorf("volume %q not found", volumeName)
 	} else if sizeNumeric, ok := volume.PropertiesMap["size-numeric"]; !ok {
 		return nil, fmt.Errorf("could not get current volume size, thus volume expansion is not possible")
 	} else if currentBlocks, err := strconv.ParseInt(sizeNumeric.Data, 10, 32); err != nil {
@@ -43,11 +44,11 @@ func (controller *Controller) ControllerExpandVolume(ctx context.Context, req *c
 	}
 
 	expansionSizeStr := getSizeStr(expansionSize)
-	if _, _, err := controller.client.ExpandVolume(volumeID, expansionSizeStr); err != nil {
+	if _, _, err := controller.client.ExpandVolume(volumeName, expansionSizeStr); err != nil {
 		return nil, err
 	}
 
-	klog.Infof("volume %q successfully expanded", volumeID)
+	klog.Infof("volume %q successfully expanded", volumeName)
 
 	return &csi.ControllerExpandVolumeResponse{
 		CapacityBytes:         newSize,

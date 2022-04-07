@@ -19,6 +19,7 @@
 package common
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 
@@ -45,34 +46,34 @@ func ValidateName(s string) bool {
 func TranslateName(name, prefix string) (string, error) {
 
 	klog.V(2).Infof("TranslateName VolumeNameMaxLength=%d name=[%d]%q prefix=[%d]%q", VolumeNameMaxLength, len(name), name, len(prefix), prefix)
-	volumeID := name
+	volumeName := name
 
 	if len(prefix) == 0 {
 		// If string is greater than max, truncate it, otherwise return original string
-		if len(volumeID) > VolumeNameMaxLength {
+		if len(volumeName) > VolumeNameMaxLength {
 			// Skip over 'pvc-'
-			if len(volumeID) >= 4 && volumeID[0:4] == "pvc-" {
-				volumeID = volumeID[4:]
+			if len(volumeName) >= 4 && volumeName[0:4] == "pvc-" {
+				volumeName = volumeName[4:]
 			}
 			// Skip over 'snapshot-'
-			if len(volumeID) >= 9 && volumeID[0:9] == "snapshot-" {
-				volumeID = volumeID[9:]
+			if len(volumeName) >= 9 && volumeName[0:9] == "snapshot-" {
+				volumeName = volumeName[9:]
 			}
-			volumeID = strings.ReplaceAll(volumeID, "-", "")
-			klog.V(2).Infof("volumeID=[%d]%q", len(volumeID), volumeID)
-			if len(volumeID) > VolumeNameMaxLength {
-				volumeID = volumeID[:VolumeNameMaxLength]
+			volumeName = strings.ReplaceAll(volumeName, "-", "")
+			klog.V(2).Infof("volumeName=[%d]%q", len(volumeName), volumeName)
+			if len(volumeName) > VolumeNameMaxLength {
+				volumeName = volumeName[:VolumeNameMaxLength]
 			}
 		}
 	} else {
 		// Skip over 'pvc-' and remove all dashes
-		uuid := volumeID
-		if len(volumeID) >= 4 && volumeID[0:4] == "pvc-" {
-			uuid = volumeID[4:]
+		uuid := volumeName
+		if len(volumeName) >= 4 && volumeName[0:4] == "pvc-" {
+			uuid = volumeName[4:]
 			klog.Infof("TranslateName(pvc): uuid=%q", uuid)
 		}
-		if len(volumeID) >= 9 && volumeID[0:9] == "snapshot-" {
-			uuid = volumeID[9:]
+		if len(volumeName) >= 9 && volumeName[0:9] == "snapshot-" {
+			uuid = volumeName[9:]
 			klog.Infof("TranslateName(snapshot): uuid=%q", uuid)
 		}
 		uuid = strings.ReplaceAll(uuid, "-", "")
@@ -85,13 +86,43 @@ func TranslateName(name, prefix string) (string, error) {
 
 		if len(prefix)+len(uuid) > VolumeNameMaxLength {
 			truncate := VolumeNameMaxLength - len(prefix)
-			volumeID = prefix + uuid[len(uuid)-truncate:]
+			volumeName = prefix + uuid[len(uuid)-truncate:]
 		} else {
-			volumeID = prefix + uuid
+			volumeName = prefix + uuid
 		}
 	}
 
-	klog.Infof("TranslateName %q[%d], prefix %q[%d], result %q[%d]", name, len(name), prefix, len(prefix), volumeID, len(volumeID))
+	klog.Infof("TranslateName %q[%d], prefix %q[%d], result %q[%d]", name, len(name), prefix, len(prefix), volumeName, len(volumeName))
 
-	return volumeID, nil
+	return volumeName, nil
+}
+
+// VolumeIdGetName: Decode the augmented volume identifier and return the name only
+func VolumeIdGetName(volumeId string) (string, error) {
+	tokens := strings.Split(volumeId, AugmentKey)
+
+	if len(tokens) > 0 {
+		return tokens[0], nil
+	} else {
+		return "", fmt.Errorf("Unable to retrieve volume name from (%s)", volumeId)
+	}
+}
+
+// VolumeIdGetStorageProtocol: Decode the augmented volume identifier and return the storage protocol only
+func VolumeIdGetStorageProtocol(volumeId string) (string, error) {
+	tokens := strings.Split(volumeId, AugmentKey)
+
+	if len(tokens) > 1 {
+		return tokens[1], nil
+	} else {
+		return "", fmt.Errorf("Unable to retrieve storage protocol from (%s)", volumeId)
+	}
+}
+
+// VolumeIdAugment: Extend the volume name by augmenting it with storage protocol
+func VolumeIdAugment(volumename, storageprotocol string) string {
+
+	volumeId := volumename + AugmentKey + storageprotocol
+	klog.V(2).Infof("VolumeIdAugment: %s", volumeId)
+	return volumeId
 }
