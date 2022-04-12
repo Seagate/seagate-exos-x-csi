@@ -89,6 +89,8 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 // ListSnapshots: list existing snapshots up to MaxEntries
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	response, respStatus, err := controller.client.ShowSnapshots(req.SnapshotId, req.SourceVolumeId)
+	// invalidArgumentErrorCode returned from controller when an invalid volume is specified
+	// return an empty response object in this case
 	if err != nil && respStatus.ReturnCode != invalidArgumentErrorCode {
 		return nil, err
 	}
