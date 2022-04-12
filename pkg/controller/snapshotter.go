@@ -88,8 +88,8 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 
 // ListSnapshots: list existing snapshots up to MaxEntries
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	response, _, err := controller.client.ShowSnapshots(req.SnapshotId, req.SourceVolumeId)
-	if err != nil {
+	response, respStatus, err := controller.client.ShowSnapshots(req.SnapshotId, req.SourceVolumeId)
+	if err != nil && respStatus.ReturnCode != invalidArgumentErrorCode {
 		return nil, err
 	}
 
