@@ -91,8 +91,8 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	sourceVolumeId, err := common.VolumeIdGetName(req.GetSourceVolumeId())
 
-	response, _, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
-	if err != nil {
+	response, respStatus, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
+	if err != nil && respStatus.ReturnCode != invalidArgumentErrorCode {
 		return nil, err
 	}
 

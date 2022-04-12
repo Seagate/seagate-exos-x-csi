@@ -23,6 +23,7 @@ const (
 	snapshotAlreadyExists                 = -10186
 	initiatorNicknameOrIdentifierNotFound = -10386
 	unmapFailedErrorCode                  = -10509
+	invalidArgumentErrorCode              = -10058
 )
 
 var volumeCapabilities = []*csi.VolumeCapability{
