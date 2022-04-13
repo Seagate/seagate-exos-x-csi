@@ -9,7 +9,9 @@ fi
 ACTION=$1
 QUANTITY=$2
 
-echo ${ACTION} ${QUANTITY} pods and PVC
+echo ""
+echo "pvc-hell ${ACTION} ${QUANTITY} pods and PVC"
+echo ""
 
 rm -f /tmp/pvc-hell.yaml
 for ((i=1; i <= QUANTITY; i++)); do
