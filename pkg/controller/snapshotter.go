@@ -92,8 +92,17 @@ func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSn
 	sourceVolumeId, err := common.VolumeIdGetName(req.GetSourceVolumeId())
 
 	response, respStatus, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
-	if err != nil && respStatus.ReturnCode != invalidArgumentErrorCode {
-		return nil, err
+	// invalidArgumentErrorCode returned from controller when an invalid volume is specified
+	// return an empty response object in this case
+	if err != nil {
+		if respStatus.ReturnCode == invalidArgumentErrorCode {
+			return &csi.ListSnapshotsResponse{
+				Entries:   []*csi.ListSnapshotsResponse_Entry{},
+				NextToken: "",
+			}, nil
+		} else {
+			return nil, err
+		}
 	}
 
 	// StartingToken is an index from 1 to maximum, "" returns 0
