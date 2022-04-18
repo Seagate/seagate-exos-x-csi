@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,13 +33,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	}
 
 	// Extract the storage interface protocol to be used for this volume (iscsi, fc, sas, etc)
-	storageProtocol := parameters[common.StorageProtocolKey]
-
-	if storageProtocol == "" {
-		klog.Warningf("Invalid or no storage protocol specified (%s)", storageProtocol)
-		klog.Warningf("Expecting storageProtocol (iscsi, fc, sas, etc) in StorageClass YAML. Default of (%s) used.", common.StorageProtocolISCSI)
-		storageProtocol = common.StorageProtocolISCSI
-	}
+	storageProtocol := storage.ValidateStorageProtocol(parameters[common.StorageProtocolKey])
 
 	if common.ValidateName(volumeName) == false {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
