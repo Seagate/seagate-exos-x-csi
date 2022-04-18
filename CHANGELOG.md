@@ -1,3 +1,14 @@
+## [1.2.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.0...v1.2.1) (2022-04-18)
+
+### Bug Fixes
+
+- Corrected Controller CreateVolume to use default iscsi when storage protocol is missing from StorageClass YAML ([8dd2d76](https://github.com/Seagate/seagate-exos-x-csi/commit/8dd2d765de4d36af46fa6c5032c7bcc74da218a9))
+- Improved the storage protocol validation to exclude invalid strings ([67a9cde](https://github.com/Seagate/seagate-exos-x-csi/commit/67a9cdef117cc4c3bda72d506118213f14031cba))
+
+### Other
+
+- Merge pull request #37 from Seagate/fix/no-storage-protocol ([3162dd9](https://github.com/Seagate/seagate-exos-x-csi/commit/3162dd969a80640541ffb7b9305bac9f60567853)), closes [#37](https://github.com/Seagate/seagate-exos-x-csi/issues/37)
+
 # [1.2.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.1.1...v1.2.0) (2022-04-07)
 
 ### Features
