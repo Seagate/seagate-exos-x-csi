@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +33,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	}
 
 	// Extract the storage interface protocol to be used for this volume (iscsi, fc, sas, etc)
-	storageProtocol := parameters[common.StorageProtocolKey]
+	storageProtocol := storage.ValidateStorageProtocol(parameters[common.StorageProtocolKey])
 
 	if common.ValidateName(volumeName) == false {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
@@ -93,10 +94,17 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 	if storageProtocol == common.StorageProtocolISCSI {
 		// Fill iSCSI context parameters
-		targetId, _ := controller.client.Info.GetTargetId("iSCSI")
+		targetId, err1 := controller.client.Info.GetTargetId("iSCSI")
+		if err1 != nil {
+			klog.Errorf("++ GetTargetId error: %v", err1)
+		}
 		req.GetParameters()["iqn"] = targetId
-		portals, _ := controller.client.Info.GetPortals()
+		portals, err2 := controller.client.Info.GetPortals()
+		if err2 != nil {
+			klog.Errorf("++ GetPortals error: %v", err2)
+		}
 		req.GetParameters()["portals"] = portals
+		klog.V(2).Infof("Storing iSCSI iqn: %s, portals: %v", targetId, portals)
 	}
 
 	volumeId := common.VolumeIdAugment(volumeName, storageProtocol)

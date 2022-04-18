@@ -76,3 +76,14 @@ func NewStorageNode(storageProtocol string, config map[string]string) (StorageOp
 	}
 	return nil, err
 }
+
+// ValidateStorageProtocol: Verifies that a correct protocol is chosen or returns a valid default storage protocol.
+func ValidateStorageProtocol(storageProtocol string) string {
+	if storageProtocol == common.StorageProtocolFC || storageProtocol == common.StorageProtocolISCSI || storageProtocol == common.StorageProtocolSAS {
+		return storageProtocol
+	} else {
+		klog.Warningf("Invalid or no storage protocol specified (%s)", storageProtocol)
+		klog.Warningf("Expecting storageProtocol (iscsi, fc, sas, etc) in StorageClass YAML. Default of (%s) used.", common.StorageProtocolISCSI)
+		return common.StorageProtocolISCSI
+	}
+}
