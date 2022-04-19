@@ -9,7 +9,7 @@ endif
 ifdef VERSION
 VERSION := $(VERSION)
 else
-VERSION := v1.1.0
+VERSION := v1.2.1
 endif
 
 VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
@@ -33,6 +33,7 @@ help:
 	@echo "make image      - create a repo docker image ($(IMAGE))"
 	@echo "make limage     - create a local docker image ($(IMAGE))"
 	@echo "make ubi        - create a local docker image using Redhat UBI ($(IMAGE))"
+	@echo "make openshift  - Create OpenShift-certification candidate image ($(IMAGE))"
 	@echo "make push       - push the docker image to '$(DOCKER_HUB_REPOSITORY)'"
 	@echo ""
 
@@ -69,6 +70,17 @@ ubi:
 	@echo ""
 	@echo "[] ubi"
 	docker build -f Dockerfile.ubi -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
+
+openshift:
+	@echo ""
+	@echo "[] openshift"
+	sed < Dockerfile.redhat > Dockerfile.tmp \
+		-e 's/^ARG version=.*/ARG version=$(VERSION)/' \
+		-e 's/^ARG vcs_ref=.*/ARG vcs_ref=$(strip $(shell git rev-parse HEAD))/' \
+		-e 's/^ARG build_date=.*/ARG build_date=$(strip $(shell date --utc -Iseconds))/'
+	cmp Dockerfile.redhat Dockerfile.tmp && rm Dockerfile.tmp || mv Dockerfile.tmp Dockerfile.redhat
+	docker build -f Dockerfile.redhat -t $(BIN) .
+	docker inspect $(BIN):latest
 
 push:
 	@echo ""
