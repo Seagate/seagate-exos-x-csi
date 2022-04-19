@@ -1,0 +1,78 @@
+# -*- compile-command: "make openshift" -*-
+
+# This is a multi-stage build that expects build-args on the command
+# line, or for args to be updated in this file prior to building.  See
+# the ARG section below.
+
+FROM docker.io/library/golang AS build
+
+RUN printenv
+RUN go version
+RUN apt update && apt install -y make git
+
+WORKDIR /app
+COPY ./go.* ./
+COPY cmd cmd
+COPY pkg pkg
+COPY Makefile ./
+
+RUN echo "package common\nconst Version = \"${version}\"" > ./pkg/common/version.go
+
+RUN make controller node; cp seagate-exos-x-csi-controller seagate-exos-x-csi-node /
+
+RUN ls -l /
+
+########################################################################
+
+FROM redhat/ubi8
+
+ARG version=v1.2.1
+ARG vcs_ref=d2069ed88e41254ec60b5da57cf16da45423b499
+ARG build_date=2022-04-19T19:50:15+00:00
+ARG vendor=Seagate
+ARG family="Exos X"
+ARG app="${family} CSI Driver"
+ARG email=frontline@seagate.com
+ARG source=https://github.com/seagate/seagate-exos-x-csi
+ARG summary="CSI Driver for Seagate Exos X storage arrays"
+ARG description="The Seagate Exos X CSI Driver enables Kubernetes to provision storage for containerized workloads from Seagate Exos X storage systems."
+
+# In addition to OCI labels, we add certain labels required for OpenShift certification, and others recommended for K8s apps,
+# and a few just to override labels from the base container.
+#
+# * https://redhat-connect.gitbook.io/partner-guide-for-red-hat-openshift-and-container/program-on-boarding/technical-prerequisites
+# * https://github.com/opencontainers/image-spec/blob/main/annotations.md
+# * http://label-schema.org/rc1/ (deprecated)
+# * https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
+
+LABEL name="${app}" \
+      maintainer="${vendor} <${email}>" \
+      vendor="${vendor}" \
+      version="${version}" \
+      release="${version}" \
+      summary="${summary}" \
+      vcs-ref="${vcs_ref}" \
+      vcs-type="git" \
+      description="${description}" \
+      org.opencontainers.image.authors="${email}" \
+      org.opencontainers.image.version="${version}" \
+      org.opencontainers.image.revision="${vcs_ref}" \
+      org.opencontainers.image.created="$build_date" \
+      org.opencontainers.image.vendor="${vendor}" \
+      org.opencontainers.image.source="${source}" \
+      io.k8s.display-name="${app}" \
+      io.k8s.description="${description}"
+
+RUN yum update -y && \
+    yum -y install iscsi-initiator-utils kmod && \
+    yum clean all && \
+    rm -rf /var/cache
+
+ENV PATH="${PATH}:/lib/udev"
+
+COPY --from=build /seagate-exos-x-csi-controller /seagate-exos-x-csi-node /usr/local/bin/
+
+# Red Hat requires licenses to be in this folder
+COPY licenses /licenses
+
+CMD [ "/usr/local/bin/seagate-exos-x-csi-controller" ]
