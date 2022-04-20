@@ -74,7 +74,11 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		}
 
 		if sourceId != "" {
-			_, apistatus, err2 := controller.client.CopyVolume(sourceId, volumeName, parameters[common.PoolConfigKey])
+			sourceName, err := common.VolumeIdGetName(sourceId)
+			if err != nil {
+				return nil, err
+			}
+			_, apistatus, err2 := controller.client.CopyVolume(sourceName, volumeName, parameters[common.PoolConfigKey])
 			if err2 != nil {
 				klog.Infof("-- CopyVolume apistatus.ReturnCode %v", apistatus.ReturnCode)
 				if apistatus != nil && apistatus.ReturnCode == snapshotNotFoundErrorCode {
