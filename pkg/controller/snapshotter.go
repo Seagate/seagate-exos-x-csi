@@ -22,25 +22,26 @@ import (
 func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 
 	parameters := req.GetParameters()
-	name, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
+	snapshotName, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "trnaslate snapshot name contains invalid characters")
+		return nil, status.Error(codes.InvalidArgument, "translate snapshot name contains invalid characters")
 	}
 
-	if common.ValidateName(name) == false {
+	if common.ValidateName(snapshotName) == false {
 		return nil, status.Error(codes.InvalidArgument, "snapshot name contains invalid characters")
 	}
 
-	if req.SourceVolumeId == "" {
+	sourceVolumeId, err := common.VolumeIdGetName(req.GetSourceVolumeId())
+	if sourceVolumeId == "" || err != nil {
 		return nil, status.Error(codes.InvalidArgument, "snapshot SourceVolumeId is not valid")
 	}
 
-	_, respStatus, err := controller.client.CreateSnapshot(req.SourceVolumeId, name)
+	_, respStatus, err := controller.client.CreateSnapshot(sourceVolumeId, snapshotName)
 	if err != nil && respStatus.ReturnCode != snapshotAlreadyExists {
 		return nil, err
 	}
 
-	response, _, err := controller.client.ShowSnapshots(name, "")
+	response, _, err := controller.client.ShowSnapshots(snapshotName, "")
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 		return nil, errors.New("snapshot not found")
 	}
 
-	if snapshot.SourceVolumeId != req.SourceVolumeId {
+	if snapshot.SourceVolumeId != sourceVolumeId {
 		return nil, status.Error(codes.AlreadyExists, "cannot validate volume with empty ID")
 	}
 
@@ -88,7 +89,9 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 
 // ListSnapshots: list existing snapshots up to MaxEntries
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	response, _, err := controller.client.ShowSnapshots(req.SnapshotId, req.SourceVolumeId)
+	sourceVolumeId, err := common.VolumeIdGetName(req.GetSourceVolumeId())
+
+	response, _, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
 	if err != nil {
 		return nil, err
 	}
