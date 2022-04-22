@@ -91,9 +91,18 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	sourceVolumeId, err := common.VolumeIdGetName(req.GetSourceVolumeId())
 
-	response, _, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
+	response, respStatus, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
+	// invalidArgumentErrorCode returned from controller when an invalid volume is specified
+	// return an empty response object in this case
 	if err != nil {
-		return nil, err
+		if respStatus.ReturnCode == invalidArgumentErrorCode {
+			return &csi.ListSnapshotsResponse{
+				Entries:   []*csi.ListSnapshotsResponse_Entry{},
+				NextToken: "",
+			}, nil
+		} else {
+			return nil, err
+		}
 	}
 
 	// StartingToken is an index from 1 to maximum, "" returns 0
