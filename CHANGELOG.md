@@ -1,3 +1,18 @@
+## [1.2.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.1...v1.2.2) (2022-04-22)
+
+### Bug Fixes
+
+- **ListSnapshots:** Explicitly return empty snapshot response on -10058 rc ([bf37b55](https://github.com/Seagate/seagate-exos-x-csi/commit/bf37b551626f014e69c90789f7bdbd9033c6ff34))
+- **ListSnapshots:** Handle -10058 return code when listing snapshots of non-existent volume ([04f14b5](https://github.com/Seagate/seagate-exos-x-csi/commit/04f14b59d962481922b5642ca174a6baa0179cf0))
+
+### Other
+
+- Merge pull request #41 from David-T-White/fix/listsnapshots ([a29e120](https://github.com/Seagate/seagate-exos-x-csi/commit/a29e120f1f5bb083f73f9a8d96bfdba4050a5ded)), closes [#41](https://github.com/Seagate/seagate-exos-x-csi/issues/41)
+- Merge pull request #40 from David-T-White/bug/unmatched_quotes ([73b49f0](https://github.com/Seagate/seagate-exos-x-csi/commit/73b49f0c6b34ca7eb16e29e859dcc98d5f60ff3d)), closes [#40](https://github.com/Seagate/seagate-exos-x-csi/issues/40)
+- Merge pull request #39 from Seagate/openshift-certification ([41a7b6f](https://github.com/Seagate/seagate-exos-x-csi/commit/41a7b6fd7466259cced34bb39a6923dc64632aa3)), closes [#39](https://github.com/Seagate/seagate-exos-x-csi/issues/39)
+- add Dockerfile.redhat and license files for OpenShift certification ([75e86fc](https://github.com/Seagate/seagate-exos-x-csi/commit/75e86fcd107fbb1a1312c0791f57adc27dd96e94))
+- fix mismatched quote errors from passing augmented volumeid ([e45263a](https://github.com/Seagate/seagate-exos-x-csi/commit/e45263afca9e6bfe0adbb046eac0976fa160424d))
+
 ## [1.2.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.0...v1.2.1) (2022-04-18)
 
 ### Bug Fixes
