@@ -12,6 +12,7 @@ import (
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/exporter"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/google/uuid"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
@@ -91,11 +92,19 @@ func (driver *Driver) InitServer(unaryServerInterceptors ...grpc.UnaryServerInte
 	)
 }
 
+var routineDepth = 0
+
 func NewLogRoutineServerInterceptor(shouldLogRoutine func(string) bool) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if shouldLogRoutine(info.FullMethod) {
-			klog.Infof("=== [ROUTINE START] %s ===", info.FullMethod)
-			defer klog.Infof("=== [ROUTINE END] %s ===", info.FullMethod)
+			uuid := uuid.New().String()
+			shortuuid := uuid[strings.LastIndex(uuid, "-")+1:]
+			routineDepth++
+			klog.Infof("=== [ROUTINE START] [%d] %s (%s) ===", routineDepth, info.FullMethod, shortuuid)
+			defer func() {
+				routineDepth--
+				klog.Infof("=== [ROUTINE END] [%d] %s (%s) ===", routineDepth, info.FullMethod, shortuuid)
+			}()
 		}
 
 		result, err := handler(ctx, req)

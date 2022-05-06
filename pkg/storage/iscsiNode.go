@@ -115,7 +115,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if err = checkFs(path); err != nil {
+	if err = checkFs(path, "Publish"); err != nil {
 		return nil, status.Errorf(codes.DataLoss, "filesystem seems to be corrupted: %v", err)
 	}
 
@@ -140,6 +140,9 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	}
 
 	klog.Infof("saving ISCSI connection info in %s", iscsi.iscsiInfoPath)
+	if _, err := os.Stat(iscsi.iscsiInfoPath); err == nil {
+		klog.Warningf("@@ File Exists: %s", iscsi.iscsiInfoPath)
+	}
 	err = iscsilib.PersistConnector(&connector, iscsi.iscsiInfoPath)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -204,7 +207,7 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
-	if err = checkFs(connector.DevicePath); err != nil {
+	if err = checkFs(connector.DevicePath, "Unpublish"); err != nil {
 		return nil, status.Errorf(codes.DataLoss, "Filesystem seems to be corrupted: %v", err)
 	}
 
@@ -284,8 +287,8 @@ func (iscsi *iscsiStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfo
 }
 
 // checkFs:
-func checkFs(path string) error {
-	klog.Infof("Checking filesystem at %s", path)
+func checkFs(path string, context string) error {
+	klog.Infof("Checking filesystem at %s (%s)", path, context)
 	if out, err := exec.Command("e2fsck", "-n", path).CombinedOutput(); err != nil {
 		return errors.New(string(out))
 	}
