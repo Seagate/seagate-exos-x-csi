@@ -70,7 +70,8 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	}
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-	klog.Infof("publishing volume %s", volumeName)
+	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
+	klog.Infof("publishing volume %s, wwn (%s)", volumeName, wwn)
 	klog.Infof("target path: %s", req.GetTargetPath())
 
 	iqn := req.GetVolumeContext()["iqn"]
@@ -78,7 +79,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	klog.Infof("iSCSI iqn: %s, portals: %v", iqn, portals)
 
 	lun, _ := strconv.ParseInt(req.GetPublishContext()["lun"], 10, 32)
-	klog.Infof("LUN: %d", lun)
+	klog.Infof("@@ lun-%d, LUN: %d", lun, lun)
 
 	klog.Info("initiating ISCSI connection...")
 	targets := make([]iscsilib.TargetInfo, 0)
@@ -95,6 +96,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		Targets:     targets,
 		Lun:         int32(lun),
 		DoDiscovery: true,
+		RetryCount:  20,
 	}
 
 	path, err := iscsilib.Connect(&connector)
@@ -103,10 +105,30 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	}
 	klog.Infof("attached device at %s", path)
 
-	if connector.Multipath {
-		klog.Info("device is using multipath")
-	} else {
-		klog.Info("device is NOT using multipath")
+	exists := true
+	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
+	klog.Infof("@@ ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+	if err != nil {
+		exists = false
+	}
+
+	// wait here until the dm-name exists, for debugging
+	if exists == false {
+		// Force a reload of all existing multipath maps
+		if output, err := exec.Command("multipath", "-r").CombinedOutput(); err != nil {
+			klog.Infof("## (publish) multipath -r: output=%v, err=%v", output, err)
+		}
+
+		attempts := 1
+		for attempts < 11 {
+			out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
+			klog.Infof("@@ [%d] ls -l %s, err = %v, out = \n%s", attempts, fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+			if err == nil {
+				break
+			}
+			time.Sleep(10 * time.Second)
+			attempts++
+		}
 	}
 
 	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
@@ -115,15 +137,31 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	corrupted := false
 	if err = checkFs(path, "Publish"); err != nil {
-		return nil, status.Errorf(codes.DataLoss, "filesystem seems to be corrupted: %v", err)
+		corrupted = true
 	}
 
-	out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
+	if connector.Multipath {
+		klog.Infof("device is using multipath, device=%v, wwn=%v, exists=%v, corrupted=%v", path, wwn, exists, corrupted)
+	} else {
+		klog.Infof("device is NOT using multipath, device=%v, wwn=%v, exists=%v, corrupted=%v", path, wwn, exists, corrupted)
+	}
+
+	if corrupted {
+		klog.Infof("device corruption (publish), device=%v, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, connector.Multipath, wwn, exists, corrupted)
+		debugCorruption("$$", path)
+		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
+	}
+
+	out, err = exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
 	mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
 	if err != nil || len(mountpoints) == 0 {
-		klog.Infof("mounting volume at %s", req.GetTargetPath())
+		klog.Infof("mount -t %s %s %s", fsType, path, req.GetTargetPath())
 		os.Mkdir(req.GetTargetPath(), 00755)
+		if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			klog.Infof("@@ targetpath does not exist:%s", req.GetTargetPath())
+		}
 		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
 		if err != nil {
 			return nil, status.Error(codes.Internal, string(out))
@@ -167,8 +205,10 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	_, err := os.Stat(req.GetTargetPath())
 	if err == nil {
 		klog.Infof("unmounting volume at %s", req.GetTargetPath())
+		klog.V(4).Infof("command: %s %s", "mountpoint", req.GetTargetPath())
 		out, err := exec.Command("mountpoint", req.GetTargetPath()).CombinedOutput()
 		if err == nil {
+			klog.V(4).Infof("command: %s %s", "umount -l", req.GetTargetPath())
 			out, err := exec.Command("umount", "-l", req.GetTargetPath()).CombinedOutput()
 			if err != nil {
 				return nil, status.Error(codes.Internal, string(out))
@@ -207,8 +247,18 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
+	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
+	exists := true
+	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
+	klog.Infof("@@ ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+	if err != nil {
+		exists = false
+	}
+
 	if err = checkFs(connector.DevicePath, "Unpublish"); err != nil {
-		return nil, status.Errorf(codes.DataLoss, "Filesystem seems to be corrupted: %v", err)
+		klog.Infof("device corruption (unpublish), device=%v, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, connector.Multipath, wwn, exists, true)
+		debugCorruption("!!", connector.DevicePath)
+		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
 	klog.Info("DisconnectVolume, detaching ISCSI device")
@@ -288,7 +338,7 @@ func (iscsi *iscsiStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfo
 
 // checkFs:
 func checkFs(path string, context string) error {
-	klog.Infof("Checking filesystem at %s (%s)", path, context)
+	klog.Infof("Checking filesystem (e2fsck -n %s) [%s]", path, context)
 	if out, err := exec.Command("e2fsck", "-n", path).CombinedOutput(); err != nil {
 		return errors.New(string(out))
 	}
@@ -382,4 +432,18 @@ func isVolumeInUse(devicePath string) bool {
 		}
 	}
 	return true
+}
+
+func debugCorruption(prefix, path string) {
+	out, err := exec.Command("lsof", "-V", path).Output()
+	klog.Infof("%s checkFs ERROR lsof %s, err = %v, out = \n%s", prefix, path, err, string(out))
+
+	out, err = exec.Command("ls", "-l", path).CombinedOutput()
+	klog.Infof("%s ls -l %s, err = %v, out = \n%s", prefix, path, err, string(out))
+
+	out, err = exec.Command("multipath", "-ll", "-v2", path).CombinedOutput()
+	klog.Infof("%s multipath -ll -v2 %s, err = %v, out = \n%s", prefix, path, err, string(out))
+
+	out, err = exec.Command("ls", "-lR", "/dev/disk").CombinedOutput()
+	klog.Infof("%s ls -lR /dev/disk, err = %v, out = \n%s", prefix, err, string(out))
 }

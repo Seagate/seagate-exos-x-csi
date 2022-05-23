@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -76,6 +77,8 @@ func NewDriver(collectors ...prometheus.Collector) *Driver {
 	return &Driver{exporter: exporter}
 }
 
+var routineTimers = map[string]time.Time{}
+
 func (driver *Driver) InitServer(unaryServerInterceptors ...grpc.UnaryServerInterceptor) {
 	interceptors := append([]grpc.UnaryServerInterceptor{
 		func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -93,17 +96,30 @@ func (driver *Driver) InitServer(unaryServerInterceptors ...grpc.UnaryServerInte
 }
 
 var routineDepth = 0
+var mu sync.Mutex
+var useMutex = true
 
 func NewLogRoutineServerInterceptor(shouldLogRoutine func(string) bool) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if shouldLogRoutine(info.FullMethod) {
 			uuid := uuid.New().String()
 			shortuuid := uuid[strings.LastIndex(uuid, "-")+1:]
+			klog.Infof("=== [ROUTINE REQUEST] [%d] %s (%s) <0s> ===", routineDepth, info.FullMethod, shortuuid)
+			routineTimers[shortuuid] = time.Now()
+			if useMutex {
+				mu.Lock()
+			}
 			routineDepth++
-			klog.Infof("=== [ROUTINE START] [%d] %s (%s) ===", routineDepth, info.FullMethod, shortuuid)
+			duration := time.Since(routineTimers[shortuuid])
+			klog.Infof("=== [ROUTINE START] [%d] %s (%s) <%s> ===", routineDepth, info.FullMethod, shortuuid, duration)
 			defer func() {
 				routineDepth--
-				klog.Infof("=== [ROUTINE END] [%d] %s (%s) ===", routineDepth, info.FullMethod, shortuuid)
+				duration := time.Since(routineTimers[shortuuid])
+				klog.Infof("=== [ROUTINE END] [%d] %s (%s) <%s> ===", routineDepth, info.FullMethod, shortuuid, duration)
+				delete(routineTimers, shortuuid)
+				if useMutex {
+					mu.Unlock()
+				}
 			}()
 		}
 

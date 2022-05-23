@@ -117,7 +117,7 @@ func (node *Node) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapab
 	}
 
 	for _, cap := range cl {
-		klog.V(4).Infof("enabled node service capability: %v", cap.String())
+		// klog.V(4).Infof("enabled node service capability: %v", cap.String())
 		csc = append(csc, &csi.NodeServiceCapability{
 			Type: &csi.NodeServiceCapability_Rpc{
 				Rpc: &csi.NodeServiceCapability_RPC{
@@ -224,7 +224,7 @@ func (node *Node) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVol
 
 // Probe returns the health and readiness of the plugin
 func (node *Node) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	klog.V(4).Infof("Probe called with args: %#v", req)
+	// klog.V(4).Infof("Probe called with args: %#v", req)
 	return &csi.ProbeResponse{Ready: &wrappers.BoolValue{Value: true}}, nil
 }
 
