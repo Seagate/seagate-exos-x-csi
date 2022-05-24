@@ -115,8 +115,8 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	// wait here until the dm-name exists, for debugging
 	if exists == false {
 		// Force a reload of all existing multipath maps
-		if output, err := exec.Command("multipath", "-r").CombinedOutput(); err != nil {
-			klog.Infof("## (publish) multipath -r: output=%v, err=%v", output, err)
+		if output, err := exec.Command("udevadm", "trigger", "-v").CombinedOutput(); err != nil {
+			klog.Infof("## (publish) udevadm trigger -v: err=%v, output=\n%v", output, err)
 		}
 
 		attempts := 1

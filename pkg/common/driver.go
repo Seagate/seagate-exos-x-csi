@@ -97,7 +97,7 @@ func (driver *Driver) InitServer(unaryServerInterceptors ...grpc.UnaryServerInte
 
 var routineDepth = 0
 var mu sync.Mutex
-var useMutex = true
+var useMutex = false
 
 func NewLogRoutineServerInterceptor(shouldLogRoutine func(string) bool) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
