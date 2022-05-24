@@ -24,4 +24,5 @@ require (
 )
 
 replace github.com/Seagate/seagate-exos-x-api-go => ../seagate-exos-x-api-go
+
 replace github.com/Seagate/csi-lib-iscsi => ../csi-lib-iscsi

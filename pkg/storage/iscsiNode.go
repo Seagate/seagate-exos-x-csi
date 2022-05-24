@@ -82,24 +82,15 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	klog.Infof("@@ lun-%d, LUN: %d", lun, lun)
 
 	klog.Info("initiating ISCSI connection...")
-	targets := make([]iscsilib.TargetInfo, 0)
-	for _, portal := range portals {
-		if portal != "" {
-			klog.V(1).Infof("-- add iqn (%v) portal (%v)", iqn, portal)
-			targets = append(targets, iscsilib.TargetInfo{
-				Iqn:    iqn,
-				Portal: portal,
-			})
-		}
-	}
 	connector := iscsilib.Connector{
-		Targets:     targets,
-		Lun:         int32(lun),
-		DoDiscovery: true,
-		RetryCount:  20,
+		TargetIqn:     iqn,
+		TargetPortals: portals,
+		Lun:           int32(lun),
+		DoDiscovery:   true,
+		RetryCount:    20,
 	}
 
-	path, err := iscsilib.Connect(&connector)
+	path, err := connector.Connect()
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
@@ -142,14 +133,14 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		corrupted = true
 	}
 
-	if connector.Multipath {
+	if connector.IsMultipathEnabled() {
 		klog.Infof("device is using multipath, device=%v, wwn=%v, exists=%v, corrupted=%v", path, wwn, exists, corrupted)
 	} else {
 		klog.Infof("device is NOT using multipath, device=%v, wwn=%v, exists=%v, corrupted=%v", path, wwn, exists, corrupted)
 	}
 
 	if corrupted {
-		klog.Infof("device corruption (publish), device=%v, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, connector.Multipath, wwn, exists, corrupted)
+		klog.Infof("device corruption (publish), device=%v, multipath=%v, wwn=%v, exists=%v, corrupted=%v", path, connector.IsMultipathEnabled(), wwn, exists, corrupted)
 		debugCorruption("$$", path)
 		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
 	}
@@ -234,14 +225,14 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	klog.Infof("connector.DevicePath (%s)", connector.DevicePath)
+	klog.Infof("connector.DevicePath (%s)", connector.MountTargetDevice.GetPath())
 
-	if isVolumeInUse(connector.DevicePath) {
+	if isVolumeInUse(connector.MountTargetDevice.GetPath()) {
 		klog.Info("volume is still in use on the node, thus it will not be detached")
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
-	_, err = os.Stat(connector.DevicePath)
+	_, err = os.Stat(connector.MountTargetDevice.GetPath())
 	if err != nil && os.IsNotExist(err) {
 		klog.Warningf("assuming that volume is already disconnected: %s", err)
 		return &csi.NodeUnpublishVolumeResponse{}, nil
@@ -255,14 +246,14 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		exists = false
 	}
 
-	if err = checkFs(connector.DevicePath, "Unpublish"); err != nil {
-		klog.Infof("device corruption (unpublish), device=%v, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, connector.Multipath, wwn, exists, true)
-		debugCorruption("!!", connector.DevicePath)
+	if err = checkFs(connector.MountTargetDevice.GetPath(), "Unpublish"); err != nil {
+		klog.Infof("device corruption (unpublish), device=%v, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.MountTargetDevice.GetPath(), connector.IsMultipathEnabled(), wwn, exists, true)
+		debugCorruption("!!", connector.MountTargetDevice.GetPath())
 		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
 	klog.Info("DisconnectVolume, detaching ISCSI device")
-	err = iscsilib.DisconnectVolume(*connector)
+	err = connector.DisconnectVolume()
 	if err != nil {
 		return nil, err
 	}
@@ -307,17 +298,17 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 	// 	connector.Devices[i].Rescan()
 	// }
 
-	if connector.Multipath {
+	if connector.IsMultipathEnabled() {
 		klog.V(2).Info("device is using multipath")
-		if err := iscsilib.ResizeMultipathDevice(connector.DevicePath); err != nil {
+		if err := iscsilib.ResizeMultipathDevice(connector.MountTargetDevice); err != nil {
 			return nil, err
 		}
 	} else {
 		klog.V(2).Info("device is NOT using multipath")
 	}
 
-	klog.Infof("expanding filesystem using resize2fs on device %s", connector.DevicePath)
-	output, err := exec.Command("resize2fs", connector.DevicePath).CombinedOutput()
+	klog.Infof("expanding filesystem using resize2fs on device %s", connector.MountTargetDevice.GetPath())
+	output, err := exec.Command("resize2fs", connector.MountTargetDevice.GetPath()).CombinedOutput()
 	if err != nil {
 		klog.V(2).Info("could not resize filesystem: %v", output)
 		return nil, fmt.Errorf("could not resize filesystem: %v", output)
