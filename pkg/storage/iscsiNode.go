@@ -79,7 +79,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	klog.Infof("iSCSI iqn: %s, portals: %v", iqn, portals)
 
 	lun, _ := strconv.ParseInt(req.GetPublishContext()["lun"], 10, 32)
-	klog.Infof("@@ lun-%d, LUN: %d", lun, lun)
+	klog.Infof("lun-%d, LUN: %d", lun, lun)
 
 	klog.Info("initiating ISCSI connection...")
 	targets := make([]iscsilib.TargetInfo, 0)
@@ -107,7 +107,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 
 	exists := true
 	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
-	klog.Infof("@@ ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+	klog.Infof("ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
 	if err != nil {
 		exists = false
 	}
@@ -115,14 +115,13 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	// wait here until the dm-name exists, for debugging
 	if exists == false {
 		// Force a reload of all existing multipath maps
-		if output, err := exec.Command("udevadm", "trigger", "-v").CombinedOutput(); err != nil {
-			klog.Infof("## (publish) udevadm trigger -v: err=%v, output=\n%v", output, err)
-		}
+		output, err := exec.Command("multipath", "-r").CombinedOutput()
+		klog.Infof("## (publish) multipath -r: err=%v, output=\n%v", output, err)
 
 		attempts := 1
 		for attempts < 11 {
 			out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
-			klog.Infof("@@ [%d] ls -l %s, err = %v, out = \n%s", attempts, fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+			klog.Infof("[%d] check for dm-name exists: ls -l %s, err = %v, out = \n%s", attempts, fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
 			if err == nil {
 				break
 			}
@@ -160,7 +159,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		klog.Infof("mount -t %s %s %s", fsType, path, req.GetTargetPath())
 		os.Mkdir(req.GetTargetPath(), 00755)
 		if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
-			klog.Infof("@@ targetpath does not exist:%s", req.GetTargetPath())
+			klog.Infof("targetpath does not exist:%s", req.GetTargetPath())
 		}
 		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
 		if err != nil {
@@ -250,7 +249,7 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
 	exists := true
 	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
-	klog.Infof("@@ ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+	klog.Infof("check for dm-name: ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
 	if err != nil {
 		exists = false
 	}
