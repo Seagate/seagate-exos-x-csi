@@ -39,7 +39,9 @@ import (
 
 // Configuration constants
 const (
-	BlkidTimeout = 10
+	BlkidTimeout      = 10
+	maxDmnameAttempts = 10
+	dmnameDelay       = 10
 )
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
@@ -119,13 +121,13 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		klog.Infof("## (publish) multipath -r: err=%v, output=\n%v", output, err)
 
 		attempts := 1
-		for attempts < 11 {
+		for attempts < (maxDmnameAttempts + 1) {
 			out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
 			klog.Infof("[%d] check for dm-name exists: ls -l %s, err = %v, out = \n%s", attempts, fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
 			if err == nil {
 				break
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(dmnameDelay * time.Second)
 			attempts++
 		}
 	}
