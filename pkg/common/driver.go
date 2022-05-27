@@ -7,11 +7,13 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/exporter"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/google/uuid"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
@@ -75,6 +77,8 @@ func NewDriver(collectors ...prometheus.Collector) *Driver {
 	return &Driver{exporter: exporter}
 }
 
+var routineTimers = map[string]time.Time{}
+
 func (driver *Driver) InitServer(unaryServerInterceptors ...grpc.UnaryServerInterceptor) {
 	interceptors := append([]grpc.UnaryServerInterceptor{
 		func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -91,11 +95,32 @@ func (driver *Driver) InitServer(unaryServerInterceptors ...grpc.UnaryServerInte
 	)
 }
 
+var routineDepth = 0
+var mu sync.Mutex
+var useMutex = false
+
 func NewLogRoutineServerInterceptor(shouldLogRoutine func(string) bool) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if shouldLogRoutine(info.FullMethod) {
-			klog.Infof("=== [ROUTINE START] %s ===", info.FullMethod)
-			defer klog.Infof("=== [ROUTINE END] %s ===", info.FullMethod)
+			uuid := uuid.New().String()
+			shortuuid := uuid[strings.LastIndex(uuid, "-")+1:]
+			klog.Infof("=== [ROUTINE REQUEST] [%d] %s (%s) <0s> ===", routineDepth, info.FullMethod, shortuuid)
+			routineTimers[shortuuid] = time.Now()
+			if useMutex {
+				mu.Lock()
+			}
+			routineDepth++
+			duration := time.Since(routineTimers[shortuuid])
+			klog.Infof("=== [ROUTINE START] [%d] %s (%s) <%s> ===", routineDepth, info.FullMethod, shortuuid, duration)
+			defer func() {
+				routineDepth--
+				duration := time.Since(routineTimers[shortuuid])
+				klog.Infof("=== [ROUTINE END] [%d] %s (%s) <%s> ===", routineDepth, info.FullMethod, shortuuid, duration)
+				delete(routineTimers, shortuuid)
+				if useMutex {
+					mu.Unlock()
+				}
+			}()
 		}
 
 		result, err := handler(ctx, req)

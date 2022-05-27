@@ -48,6 +48,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	sizeStr := getSizeStr(size)
 	pool := parameters[common.PoolConfigKey]
 	poolType, _ := controller.client.Info.GetPoolType(pool)
+	wwn := ""
 
 	if len(poolType) == 0 {
 		poolType = "Virtual"
@@ -111,7 +112,8 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		klog.V(2).Infof("Storing iSCSI iqn: %s, portals: %v", targetId, portals)
 	}
 
-	volumeId := common.VolumeIdAugment(volumeName, storageProtocol)
+	wwn, _ = controller.client.GetVolumeWwn(volumeName)
+	volumeId := common.VolumeIdAugment(volumeName, storageProtocol, wwn)
 
 	volume := &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
