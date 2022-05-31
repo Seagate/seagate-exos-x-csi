@@ -3,11 +3,12 @@ module github.com/Seagate/seagate-exos-x-csi
 go 1.16
 
 require (
-	github.com/Seagate/csi-lib-iscsi v1.0.2
-	github.com/Seagate/seagate-exos-x-api-go v1.0.5
+	github.com/Seagate/csi-lib-iscsi v1.0.3
+	github.com/Seagate/seagate-exos-x-api-go v1.0.8-0.20220531203625-3d1a38b18ac6
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/container-storage-interface/spec v1.4.0
 	github.com/golang/protobuf v1.5.2
+	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/kubernetes-csi/csi-test v0.0.0-20191016154743-6931aedb3df0
 	github.com/onsi/gomega v1.10.5

@@ -26,7 +26,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	iscsilib "github.com/Seagate/csi-lib-iscsi/iscsi"
@@ -45,10 +44,20 @@ const (
 	dmnameDelay       = 10
 )
 
-// gateKeepers is a map indexed/keyed by volume name, storing a pointer to a mutex.
-// This data structure is used to ensure that the same function is not called multiple
-// times for a given volume before the prior function completes.
-var gateKeepers = map[string]*sync.Mutex{}
+// gateKeepers is a thread safe map indexed by volume name.
+var gatekeepers = common.NewStringLock()
+
+// addGatekeeper: Ensure that NodePublishVolume and NodeUnpublishVolume are only called once per volume
+func addGatekeeper(volumeName string) {
+	klog.V(4).Infof("[LOCK] volume (%s) gatekeeper", volumeName)
+	gatekeepers.Lock(volumeName)
+}
+
+// removeGatekeeper: Unlock the volume function mutex when the Publish/Unpublish is complete
+func removeGatekeeper(volumeName string) {
+	klog.V(4).Infof("[UNLOCK] volume (%s) gatekeeper", volumeName)
+	gatekeepers.Unlock(volumeName)
+}
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
 // called by the CO before NodePublishVolume and is used to temporary mount the
@@ -80,26 +89,9 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
 
-	// Ensure that NodePublishVolume and NodeUnpublishVolume are only called once per volume
-	if mu, present := gateKeepers[volumeName]; present {
-		// pend waiting for the prior volume operation to complete
-		klog.V(4).Infof("[WAIT] publishing volume (%s) waiting for prior operation", volumeName)
-		mu.Lock()
-	} else {
-		// add a gatekeeper mutex for this volume
-		klog.V(4).Infof("[ADD] publishing volume (%s) gatekeeper", volumeName)
-		mu = new(sync.Mutex)
-		gateKeepers[volumeName] = mu
-		mu.Lock()
-	}
-
-	defer func() {
-		klog.V(4).Infof("[REMOVE] publishing volume (%s) gatekeeper", volumeName)
-		if mu, present := gateKeepers[volumeName]; present {
-			mu.Unlock()
-		}
-		delete(gateKeepers, volumeName)
-	}()
+	// Ensure that NodePublishVolume is only called once per volume
+	addGatekeeper(volumeName)
+	defer removeGatekeeper(volumeName)
 
 	klog.V(1).Infof("[START] publishing volume (%s) wwn (%s) target (%s)", volumeName, wwn, req.GetTargetPath())
 
@@ -238,26 +230,9 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
-	// Ensure that NodePublishVolume and NodeUnpublishVolume are only called once per volume
-	if mu, present := gateKeepers[volumeName]; present {
-		// pend waiting for the prior volume operation to complete
-		klog.Infof("[WAIT] unpublishing volume (%s) waiting for prior operation", volumeName)
-		mu.Lock()
-	} else {
-		// add a gatekeeper mutex for this volume
-		klog.Infof("[ADD] unpublishing volume (%s) gatekeeper", volumeName)
-		mu = new(sync.Mutex)
-		gateKeepers[volumeName] = mu
-		mu.Lock()
-	}
-
-	defer func() {
-		klog.Infof("[REMOVE] unpublishing volume (%s) gatekeeper", volumeName)
-		if mu, present := gateKeepers[volumeName]; present {
-			mu.Unlock()
-		}
-		delete(gateKeepers, volumeName)
-	}()
+	// Ensure that NodeUnpublishVolume is only called once per volume
+	addGatekeeper(volumeName)
+	defer removeGatekeeper(volumeName)
 
 	klog.Infof("[START] unpublishing volume (%s) at target path %s", volumeName, req.GetTargetPath())
 
