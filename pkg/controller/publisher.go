@@ -37,7 +37,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	}, err
 }
 
-// ControllerUnpublishVolume deattaches the given volume from the node
+// ControllerUnpublishVolume detaches the given volume from the node
 func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with empty ID")

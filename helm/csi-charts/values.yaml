@@ -12,11 +12,11 @@ image:
   repository: ghcr.io/seagate/seagate-exos-x-csi
   # -- Tag to use for nodes and controller
   # @default -- Uses Chart.appVersion value by default if tag does not specify a new version.
-  tag: "v1.1.0"
+  tag: "v1.2.3"
   # -- Default is set to IfNotPresent, to override use Always here to always pull the specified version
   pullPolicy: Always
 
-# -- Controller sidecar for provisionning
+# -- Controller sidecar for provisioning
 csiProvisioner:
   image:
     repository: k8s.gcr.io/sig-storage/csi-provisioner
@@ -87,10 +87,10 @@ nodeServer:
   nodeAffinity:
 
 podMonitor:
-  # -- Set a Prometheus operator PodMonitor ressource (true or false)
+  # -- Set a Prometheus operator PodMonitor resource (true or false)
   enabled: false
 
 serviceMonitor:
-  # -- Set a Prometheus operator ServiceMonitor ressource (true or false)
+  # -- Set a Prometheus operator ServiceMonitor resource (true or false)
   enabled: false
   

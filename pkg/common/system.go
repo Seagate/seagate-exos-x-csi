@@ -119,10 +119,21 @@ func VolumeIdGetStorageProtocol(volumeId string) (string, error) {
 	}
 }
 
-// VolumeIdAugment: Extend the volume name by augmenting it with storage protocol
-func VolumeIdAugment(volumename, storageprotocol string) string {
+// VolumeIdGetWwn: Decode the augmented volume identifier and return the WWN
+func VolumeIdGetWwn(volumeId string) (string, error) {
+	tokens := strings.Split(volumeId, AugmentKey)
 
-	volumeId := volumename + AugmentKey + storageprotocol
+	if len(tokens) > 2 {
+		return tokens[2], nil
+	} else {
+		return "", fmt.Errorf("Unable to retrieve wwn from (%s)", volumeId)
+	}
+}
+
+// VolumeIdAugment: Extend the volume name by augmenting it with storage protocol
+func VolumeIdAugment(volumename, storageprotocol, wwn string) string {
+
+	volumeId := volumename + AugmentKey + storageprotocol + AugmentKey + wwn
 	klog.V(2).Infof("VolumeIdAugment: %s", volumeId)
 	return volumeId
 }
