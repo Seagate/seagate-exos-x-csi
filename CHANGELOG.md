@@ -1,3 +1,14 @@
+## [1.2.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.2...v1.2.3) (2022-06-01)
+
+### Bug Fixes
+
+- add thread safe mutex per volume publish/unpublish ([f1a2efd](https://github.com/Seagate/seagate-exos-x-csi/commit/f1a2efdd1255289e2a49b1aa1d76a87c96c48894))
+- mutex protection, wwn for multipath confirmation ([c79a765](https://github.com/Seagate/seagate-exos-x-csi/commit/c79a76525ea6fc2a8244820e569982133aad6955))
+
+### Other
+
+- Merge pull request #42 from Seagate/fix/multipath ([6c99e54](https://github.com/Seagate/seagate-exos-x-csi/commit/6c99e5492d83b90ba6fd5c5ae133a47b45b8a6dd)), closes [#42](https://github.com/Seagate/seagate-exos-x-csi/issues/42)
+
 ## [1.2.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.1...v1.2.2) (2022-04-22)
 
 ### Bug Fixes
