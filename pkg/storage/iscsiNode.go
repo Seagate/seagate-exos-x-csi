@@ -34,7 +34,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // Configuration constants
@@ -93,7 +93,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	addGatekeeper(volumeName)
 	defer removeGatekeeper(volumeName)
 
-	klog.V(1).Infof("[START] publishing volume (%s) wwn (%s) target (%s)", volumeName, wwn, req.GetTargetPath())
+	klog.Infof("[START] publishing volume (%s) wwn (%s) target (%s)", volumeName, wwn, req.GetTargetPath())
 
 	iqn := req.GetVolumeContext()["iqn"]
 	portals := strings.Split(req.GetVolumeContext()["portals"], ",")
@@ -103,15 +103,9 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	klog.Infof("lun-%d, LUN: %d", lun, lun)
 
 	klog.Info("initiating ISCSI connection...")
-	targets := make([]iscsilib.TargetInfo, 0)
 	for _, portal := range portals {
 		if portal != "" {
 			klog.V(1).Infof("-- add iqn (%v) portal (%v)", iqn, portal)
-			targets = append(targets, iscsilib.TargetInfo{
-				Iqn:    iqn,
-				Portal: portal,
-			})
-			// test and produce a warning if path already exists before iscsi login
 			devicePath := fmt.Sprintf("/dev/disk/by-path/ip-%s:3260-iscsi-%s-lun-%d", portal, iqn, lun)
 			_, err := os.Stat(devicePath)
 			klog.V(4).Infof("[TEST] os stat device: exist %v device %v", !os.IsNotExist(err), devicePath)
@@ -121,18 +115,20 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 			}
 		}
 	}
-	connector := iscsilib.Connector{
-		Targets:     targets,
-		Lun:         int32(lun),
-		DoDiscovery: true,
-		RetryCount:  20,
+
+	connector := &iscsilib.Connector{
+		TargetIqn:     iqn,
+		TargetPortals: portals,
+		Lun:           int32(lun),
+		DoDiscovery:   true,
 	}
 
-	path, err := iscsilib.Connect(&connector)
+	path, err := connector.Connect(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
-	klog.Infof("attached device at %s", path)
+
+	klog.Infof("attached device at (%s)", path)
 
 	exists := true
 	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
@@ -171,14 +167,14 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		corrupted = true
 	}
 
-	if connector.Multipath {
+	if connector.IsMultipathEnabled() {
 		klog.Infof("device is using multipath, device=%v, wwn=%v, exists=%v, corrupted=%v", path, wwn, exists, corrupted)
 	} else {
 		klog.Infof("device is NOT using multipath, device=%v, wwn=%v, exists=%v, corrupted=%v", path, wwn, exists, corrupted)
 	}
 
 	if corrupted {
-		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, corrupted)
+		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.MountTargetDevice.GetPath(), volumeName, connector.IsMultipathEnabled(), wwn, exists, corrupted)
 		debugCorruption("$$", path)
 		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
 	}
@@ -210,7 +206,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	if _, err := os.Stat(iscsi.iscsiInfoPath); err == nil {
 		klog.Warningf("iscsi connection file already exists: %s", iscsi.iscsiInfoPath)
 	}
-	err = iscsilib.PersistConnector(&connector, iscsi.iscsiInfoPath)
+	err = connector.Persist(iscsi.iscsiInfoPath)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -221,6 +217,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 
 // NodeUnpublishVolume unmounts the volume from the target path
 func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	logger := klog.FromContext(ctx)
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty volume id")
 	}
@@ -260,7 +257,7 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	}
 
 	klog.Infof("loading ISCSI connection info from %s", iscsi.iscsiInfoPath)
-	connector, err := iscsilib.GetConnectorFromFile(iscsi.iscsiInfoPath)
+	connector, err := iscsilib.GetConnectorFromFile(&logger, iscsi.iscsiInfoPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			klog.Warning(errors.Wrap(err, "assuming that ISCSI connection is already closed"))
@@ -268,14 +265,14 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	klog.Infof("connector.DevicePath (%s)", connector.DevicePath)
+	klog.Infof("connector.DevicePath (%s)", connector.MountTargetDevice.GetPath())
 
-	if isVolumeInUse(connector.DevicePath) {
+	if isVolumeInUse(connector.MountTargetDevice.GetPath()) {
 		klog.Info("volume is still in use on the node, thus it will not be detached")
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
-	_, err = os.Stat(connector.DevicePath)
+	_, err = os.Stat(connector.MountTargetDevice.GetPath())
 	if err != nil && os.IsNotExist(err) {
 		klog.Warningf("assuming that volume is already disconnected: %s", err)
 		return &csi.NodeUnpublishVolumeResponse{}, nil
@@ -289,14 +286,14 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		exists = false
 	}
 
-	if err = checkFs(connector.DevicePath, "Unpublish"); err != nil {
-		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, true)
-		debugCorruption("!!", connector.DevicePath)
+	if err = checkFs(connector.MountTargetDevice.GetPath(), "Unpublish"); err != nil {
+		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.MountTargetDevice.GetPath(), volumeName, connector.IsMultipathEnabled(), wwn, exists, true)
+		debugCorruption("!!", connector.MountTargetDevice.GetPath())
 		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
 	klog.Info("DisconnectVolume, detaching ISCSI device")
-	err = iscsilib.DisconnectVolume(*connector)
+	err = connector.DisconnectVolume(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +313,7 @@ func (iscsi *iscsiStorage) NodeGetVolumeStats(ctx context.Context, req *csi.Node
 
 // NodeExpandVolume finalizes volume expansion on the node
 func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-
+	logger := klog.FromContext(ctx)
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	volumepath := req.GetVolumePath()
 	klog.V(2).Infof("NodeExpandVolume: VolumeId=%v,  VolumePath=%v", volumeName, volumepath)
@@ -329,7 +326,7 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume path"))
 	}
 
-	connector, err := iscsilib.GetConnectorFromFile(iscsi.iscsiInfoPath)
+	connector, err := iscsilib.GetConnectorFromFile(&logger, iscsi.iscsiInfoPath)
 	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeName, connector, err)
 
 	if err != nil {
@@ -341,17 +338,17 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 	// 	connector.Devices[i].Rescan()
 	// }
 
-	if connector.Multipath {
+	if connector.IsMultipathEnabled() {
 		klog.V(2).Info("device is using multipath")
-		if err := iscsilib.ResizeMultipathDevice(connector.DevicePath); err != nil {
+		if err := iscsilib.ResizeMultipathDevice(ctx, connector.MountTargetDevice); err != nil {
 			return nil, err
 		}
 	} else {
 		klog.V(2).Info("device is NOT using multipath")
 	}
 
-	klog.Infof("expanding filesystem using resize2fs on device %s", connector.DevicePath)
-	output, err := exec.Command("resize2fs", connector.DevicePath).CombinedOutput()
+	klog.Infof("expanding filesystem using resize2fs on device %s", connector.MountTargetDevice.GetPath())
+	output, err := exec.Command("resize2fs", connector.MountTargetDevice.GetPath()).CombinedOutput()
 	if err != nil {
 		klog.V(2).Info("could not resize filesystem: %v", output)
 		return nil, fmt.Errorf("could not resize filesystem: %v", output)

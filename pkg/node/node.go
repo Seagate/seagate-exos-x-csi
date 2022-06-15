@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/Seagate/csi-lib-iscsi/iscsi"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -30,10 +29,6 @@ type Node struct {
 
 // New is a convenience function for creating a node driver
 func New() *Node {
-	if klog.V(8) {
-		iscsi.EnableDebugLogging(os.Stderr)
-	}
-
 	node := &Node{
 		Driver:    common.NewDriver(),
 		semaphore: semaphore.NewWeighted(1),

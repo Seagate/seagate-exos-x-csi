@@ -145,7 +145,7 @@ func (driver *Driver) Start(bind string) {
 		}
 	}
 
-	klog.Infof("starting driver on %s (%s) [level %d]\n\n", runtime.GOOS, runtime.GOARCH, ll)
+	klog.Infof("starting driver on %s (%s) [v=%d]", runtime.GOOS, runtime.GOARCH, ll)
 
 	parts := strings.Split(bind, "://")
 	if len(parts) < 2 {
@@ -177,7 +177,7 @@ func (driver *Driver) Start(bind string) {
 		driver.exporter.ListenAndServe()
 	}()
 
-	klog.Infof("driver listening on %s\n\n", bind)
+	klog.Infof("driver listening on %s", bind)
 	driver.Server.Serve(socket)
 }
 
