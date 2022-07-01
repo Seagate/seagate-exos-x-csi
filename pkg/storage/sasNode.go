@@ -20,10 +20,18 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
+	saslib "github.com/Seagate/csi-lib-sas/sas"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog"
 )
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
@@ -43,7 +51,92 @@ func (sas *sasStorage) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnsta
 
 // NodePublishVolume mounts the volume mounted to the staging path to the target path
 func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "NodePublishVolume is not implemented")
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot publish volume with empty id")
+	}
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot publish volume at an empty path")
+	}
+	if req.GetVolumeCapability() == nil {
+		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
+	}
+
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
+	lun, _ := req.GetPublishContext()["lun"]
+
+	// Ensure that NodePublishVolume is only called once per volume
+	addGatekeeper(volumeName)
+	defer removeGatekeeper(volumeName)
+
+	klog.V(1).Infof("[START] publish volume (%s) wwn (%s) target (%s) lun (%s)", volumeName, wwn, req.GetTargetPath(), lun)
+
+	// Initiate SAS attachment
+	klog.Info("initiating SAS connection...")
+	connector := saslib.Connector{Lun: lun, TargetWWNs: []string{wwn}}
+	path, err := saslib.Attach(ctx, connector, &saslib.OSioHandler{})
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, err.Error())
+	}
+	klog.Infof("attached device at %s", path)
+
+	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
+	err = ensureFsType(fsType, path)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	corrupted := false
+	if err = checkFs(path, "Publish"); err != nil {
+		corrupted = true
+	}
+
+	if connector.Multipath {
+		klog.Infof("device is using multipath, device=%v, wwn=%v, corrupted=%v", path, wwn, corrupted)
+	} else {
+		klog.Infof("device is NOT using multipath, device=%v, wwn=%v, corrupted=%v", path, wwn, corrupted)
+	}
+
+	if corrupted {
+		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, corrupted)
+		debugCorruption("$$", path)
+		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
+	}
+
+	out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
+	mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
+	if err != nil || len(mountpoints) == 0 {
+		klog.V(1).Infof("mount -t %s %s %s", fsType, path, req.GetTargetPath())
+		os.Mkdir(req.GetTargetPath(), 00755)
+		if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			klog.Infof("targetpath does not exist:%s", req.GetTargetPath())
+		}
+		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
+		if err != nil {
+			return nil, status.Error(codes.Internal, string(out))
+		}
+	} else if len(mountpoints) == 1 {
+		if mountpoints[0] == req.GetTargetPath() {
+			klog.Infof("volume %s already mounted", req.GetTargetPath())
+		} else {
+			errStr := fmt.Sprintf("device has already been mounted somewhere else (%s instead of %s), please unmount first", mountpoints[0], req.GetTargetPath())
+			return nil, status.Error(codes.Internal, errStr)
+		}
+	} else if len(mountpoints) > 1 {
+		return nil, errors.New("device has already been mounted in several locations, please unmount first")
+	}
+
+	klog.Infof("saving SAS connection info in %s", sas.connectorInfoPath)
+	if _, err := os.Stat(sas.connectorInfoPath); err == nil {
+		klog.Warningf("sas connection file already exists: %s", sas.connectorInfoPath)
+	}
+	err = saslib.PersistConnector(ctx, &connector, sas.connectorInfoPath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	klog.Infof("successfully mounted volume at %s", req.GetTargetPath())
+	return &csi.NodePublishVolumeResponse{}, nil
 }
 
 // NodeUnpublishVolume unmounts the volume from the target path

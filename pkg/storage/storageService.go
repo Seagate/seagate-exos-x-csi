@@ -36,16 +36,18 @@ type commonService struct {
 }
 
 type fcStorage struct {
-	cs commonService
+	cs                commonService
+	connectorInfoPath string
 }
 
 type iscsiStorage struct {
-	cs            commonService
-	iscsiInfoPath string
+	cs                commonService
+	connectorInfoPath string
 }
 
 type sasStorage struct {
-	cs commonService
+	cs                commonService
+	connectorInfoPath string
 }
 
 // buildCommonService:
@@ -63,15 +65,15 @@ func NewStorageNode(storageProtocol string, config map[string]string) (StorageOp
 		storageProtocol = strings.TrimSpace(storageProtocol)
 		klog.V(2).Infof("NewStorageNode for (%s)", storageProtocol)
 		if storageProtocol == common.StorageProtocolFC {
-			return &fcStorage{cs: comnserv}, nil
+			return &fcStorage{cs: comnserv, connectorInfoPath: config["connectorInfoPath"]}, nil
 		} else if storageProtocol == common.StorageProtocolSAS {
-			return &sasStorage{cs: comnserv}, nil
+			return &sasStorage{cs: comnserv, connectorInfoPath: config["connectorInfoPath"]}, nil
 		} else if storageProtocol == common.StorageProtocolISCSI {
-			return &iscsiStorage{cs: comnserv, iscsiInfoPath: config["iscsiInfoPath"]}, nil
+			return &iscsiStorage{cs: comnserv, connectorInfoPath: config["connectorInfoPath"]}, nil
 		} else {
 			klog.Warningf("Invalid or no storage protocol specified (%s)", storageProtocol)
 			klog.Warningf("Expecting storageProtocol (iscsi, fc, sas, etc) in StorageClass YAML. Default of (%s) used.", common.StorageProtocolISCSI)
-			return &iscsiStorage{cs: comnserv, iscsiInfoPath: config["iscsiInfoPath"]}, nil
+			return &iscsiStorage{cs: comnserv, connectorInfoPath: config["connectorInfoPath"]}, nil
 		}
 	}
 	return nil, err

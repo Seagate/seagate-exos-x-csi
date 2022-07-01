@@ -206,11 +206,11 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		return nil, errors.New("device has already been mounted in several locations, please unmount first")
 	}
 
-	klog.Infof("saving ISCSI connection info in %s", iscsi.iscsiInfoPath)
-	if _, err := os.Stat(iscsi.iscsiInfoPath); err == nil {
-		klog.Warningf("iscsi connection file already exists: %s", iscsi.iscsiInfoPath)
+	klog.Infof("saving ISCSI connection info in %s", iscsi.connectorInfoPath)
+	if _, err := os.Stat(iscsi.connectorInfoPath); err == nil {
+		klog.Warningf("iscsi connection file already exists: %s", iscsi.connectorInfoPath)
 	}
-	err = iscsilib.PersistConnector(&connector, iscsi.iscsiInfoPath)
+	err = iscsilib.PersistConnector(&connector, iscsi.connectorInfoPath)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -259,8 +259,8 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		klog.Warningf("assuming that volume is already unmounted: %v", err)
 	}
 
-	klog.Infof("loading ISCSI connection info from %s", iscsi.iscsiInfoPath)
-	connector, err := iscsilib.GetConnectorFromFile(iscsi.iscsiInfoPath)
+	klog.Infof("loading ISCSI connection info from %s", iscsi.connectorInfoPath)
+	connector, err := iscsilib.GetConnectorFromFile(iscsi.connectorInfoPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			klog.Warning(errors.Wrap(err, "assuming that ISCSI connection is already closed"))
@@ -301,8 +301,8 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		return nil, err
 	}
 
-	klog.Infof("deleting ISCSI connection info file %s", iscsi.iscsiInfoPath)
-	os.Remove(iscsi.iscsiInfoPath)
+	klog.Infof("deleting ISCSI connection info file %s", iscsi.connectorInfoPath)
+	os.Remove(iscsi.connectorInfoPath)
 
 	klog.Info("successfully detached ISCSI device")
 	return &csi.NodeUnpublishVolumeResponse{}, nil
@@ -329,7 +329,7 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume path"))
 	}
 
-	connector, err := iscsilib.GetConnectorFromFile(iscsi.iscsiInfoPath)
+	connector, err := iscsilib.GetConnectorFromFile(iscsi.connectorInfoPath)
 	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeName, connector, err)
 
 	if err != nil {
