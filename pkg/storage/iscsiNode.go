@@ -117,10 +117,11 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	}
 
 	connector := &iscsilib.Connector{
-		TargetIqn:     iqn,
-		TargetPortals: portals,
-		Lun:           int32(lun),
-		DoDiscovery:   true,
+		TargetIqn:               iqn,
+		TargetPortals:           portals,
+		Lun:                     int32(lun),
+		DoDiscovery:             true,
+		HandleUnalignedChildren: true,
 	}
 
 	path, err := connector.Connect(ctx)
@@ -257,7 +258,7 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	}
 
 	klog.Infof("loading ISCSI connection info from %s", iscsi.iscsiInfoPath)
-	connector, err := iscsilib.GetConnectorFromFile(&logger, iscsi.iscsiInfoPath)
+	connector, err := iscsilib.GetConnectorFromFile(logger, iscsi.iscsiInfoPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			klog.Warning(errors.Wrap(err, "assuming that ISCSI connection is already closed"))
@@ -326,7 +327,7 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume path"))
 	}
 
-	connector, err := iscsilib.GetConnectorFromFile(&logger, iscsi.iscsiInfoPath)
+	connector, err := iscsilib.GetConnectorFromFile(logger, iscsi.iscsiInfoPath)
 	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeName, connector, err)
 
 	if err != nil {
