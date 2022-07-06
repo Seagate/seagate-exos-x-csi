@@ -33,6 +33,7 @@ const (
 	PasswordSecretKey         = "password"
 	StorageClassAnnotationKey = "storageClass"
 	VolumePrefixKey           = "volPrefix"
+	WWNs                      = "wwns"
 	StorageProtocolKey        = "storageProtocol"
 	StorageProtocolISCSI      = "iscsi"
 	StorageProtocolFC         = "fc"

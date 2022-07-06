@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-restore-seagate
+  namespace: demo
+spec:
+  dataSource:
+    name: snapshot-seagate
+    kind: VolumeSnapshot
+    apiGroup: "snapshot.storage.k8s.io"
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: storageclass-seagate
+  resources:
+    requests:
+      storage: 1Gi

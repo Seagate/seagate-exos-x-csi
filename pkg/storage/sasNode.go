@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
+// Copyright (c) 2022 Seagate Technology LLC and/or its Affiliates
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,14 +66,17 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	lun, _ := req.GetPublishContext()["lun"]
 
 	// Ensure that NodePublishVolume is only called once per volume
-	addGatekeeper(volumeName)
-	defer removeGatekeeper(volumeName)
+	AddGatekeeper(volumeName)
+	defer RemoveGatekeeper(volumeName)
 
 	klog.V(1).Infof("[START] publish volume (%s) wwn (%s) target (%s) lun (%s)", volumeName, wwn, req.GetTargetPath(), lun)
 
+	wwns := req.GetVolumeContext()[common.WWNs]
+	klog.Infof("SAS WWNS: %s", wwns)
+
 	// Initiate SAS attachment
 	klog.Info("initiating SAS connection...")
-	connector := saslib.Connector{Lun: lun, TargetWWNs: []string{wwn}}
+	connector := saslib.Connector{Lun: lun, TargetWWNs: []string{wwns}}
 	path, err := saslib.Attach(ctx, connector, &saslib.OSioHandler{})
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
@@ -81,13 +84,13 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	klog.Infof("attached device at %s", path)
 
 	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
-	err = ensureFsType(fsType, path)
+	err = EnsureFsType(fsType, path)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	corrupted := false
-	if err = checkFs(path, "Publish"); err != nil {
+	if err = CheckFs(path, "Publish"); err != nil {
 		corrupted = true
 	}
 
@@ -99,7 +102,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 
 	if corrupted {
 		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, corrupted)
-		debugCorruption("$$", path)
+		DebugCorruption("$$", path)
 		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
 	}
 
@@ -130,7 +133,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	if _, err := os.Stat(sas.connectorInfoPath); err == nil {
 		klog.Warningf("sas connection file already exists: %s", sas.connectorInfoPath)
 	}
-	err = saslib.PersistConnector(ctx, &connector, sas.connectorInfoPath)
+	err = connector.Persist(ctx, sas.connectorInfoPath)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -141,7 +144,92 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 
 // NodeUnpublishVolume unmounts the volume from the target path
 func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "NodeUnpublishVolume is not implemented")
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty volume id")
+	}
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty target path")
+	}
+
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+
+	// Ensure that NodeUnpublishVolume is only called once per volume
+	AddGatekeeper(volumeName)
+	defer RemoveGatekeeper(volumeName)
+
+	klog.Infof("[START] unpublishing volume (%s) at target path %s", volumeName, req.GetTargetPath())
+
+	_, err := os.Stat(req.GetTargetPath())
+	if err == nil {
+		klog.Infof("unmounting volume at %s", req.GetTargetPath())
+		klog.V(4).Infof("command: %s %s", "mountpoint", req.GetTargetPath())
+		out, err := exec.Command("mountpoint", req.GetTargetPath()).CombinedOutput()
+		if err == nil {
+			klog.V(4).Infof("command: %s %s", "umount -l", req.GetTargetPath())
+			out, err := exec.Command("umount", "-l", req.GetTargetPath()).CombinedOutput()
+			if err != nil {
+				return nil, status.Error(codes.Internal, string(out))
+			}
+		} else {
+			klog.Warningf("assuming that volume is already unmounted: %s", out)
+		}
+
+		err = os.Remove(req.GetTargetPath())
+		if err != nil && !os.IsNotExist(err) {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else {
+		klog.Warningf("assuming that volume is already unmounted: %v", err)
+	}
+
+	klog.Infof("loading SAS connection info from %s", sas.connectorInfoPath)
+	connector, err := saslib.GetConnectorFromFile(sas.connectorInfoPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			klog.Warning(errors.Wrap(err, "assuming that SAS connection was already closed"))
+			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	klog.Infof("connector.DevicePath (%s)", connector.DevicePath)
+
+	if IsVolumeInUse(connector.DevicePath) {
+		klog.Info("volume is still in use on the node, thus it will not be detached")
+		return &csi.NodeUnpublishVolumeResponse{}, nil
+	}
+
+	_, err = os.Stat(connector.DevicePath)
+	if err != nil && os.IsNotExist(err) {
+		klog.Warningf("assuming that volume is already disconnected: %s", err)
+		return &csi.NodeUnpublishVolumeResponse{}, nil
+	}
+
+	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
+	exists := true
+	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
+	klog.Infof("check for dm-name: ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+	if err != nil {
+		exists = false
+	}
+
+	if err = CheckFs(connector.DevicePath, "Unpublish"); err != nil {
+		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, true)
+		DebugCorruption("!!", connector.DevicePath)
+		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
+	}
+
+	klog.Info("DisconnectVolume, detaching SAS device")
+	err = saslib.Detach(ctx, connector.DevicePath, connector.IoHandler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	klog.Infof("deleting SAS connection info file %s", sas.connectorInfoPath)
+	os.Remove(sas.connectorInfoPath)
+
+	klog.Info("successfully detached SAS device")
+	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 // NodeGetVolumeStats return info about a given volume
@@ -152,7 +240,43 @@ func (sas *sasStorage) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetV
 
 // NodeExpandVolume finalizes volume expansion on the node
 func (sas *sasStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "NodeExpandVolume is not implemented")
+
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	volumepath := req.GetVolumePath()
+	klog.V(2).Infof("NodeExpandVolume: VolumeId=%v,  VolumePath=%v", volumeName, volumepath)
+
+	if len(volumeName) == 0 {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume id"))
+	}
+
+	if len(volumepath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("node expand volume requires volume path"))
+	}
+
+	connector, err := saslib.GetConnectorFromFile(sas.connectorInfoPath)
+	klog.V(3).Infof("GetConnectorFromFile(%s) connector: %v, err: %v", volumeName, connector, err)
+
+	if err != nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("node expand volume path not found for volume id (%s)", volumeName))
+	}
+
+	if connector.Multipath {
+		klog.V(2).Info("device is using multipath")
+		if err := saslib.ResizeMultipathDevice(ctx, connector.DevicePath); err != nil {
+			return nil, err
+		}
+	} else {
+		klog.V(2).Info("device is NOT using multipath")
+	}
+
+	klog.Infof("expanding filesystem using resize2fs on device %s", connector.DevicePath)
+	output, err := exec.Command("resize2fs", connector.DevicePath).CombinedOutput()
+	if err != nil {
+		klog.V(2).Info("could not resize filesystem: %v", output)
+		return nil, fmt.Errorf("could not resize filesystem: %v", output)
+	}
+
+	return &csi.NodeExpandVolumeResponse{}, nil
 }
 
 // NodeGetCapabilities returns the supported capabilities of the node server

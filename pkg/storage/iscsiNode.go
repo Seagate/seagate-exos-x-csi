@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -43,21 +42,6 @@ const (
 	maxDmnameAttempts = 18
 	dmnameDelay       = 10
 )
-
-// gateKeepers is a thread safe map indexed by volume name.
-var gatekeepers = common.NewStringLock()
-
-// addGatekeeper: Ensure that NodePublishVolume and NodeUnpublishVolume are only called once per volume
-func addGatekeeper(volumeName string) {
-	klog.V(4).Infof("[LOCK] volume (%s) gatekeeper", volumeName)
-	gatekeepers.Lock(volumeName)
-}
-
-// removeGatekeeper: Unlock the volume function mutex when the Publish/Unpublish is complete
-func removeGatekeeper(volumeName string) {
-	klog.V(4).Infof("[UNLOCK] volume (%s) gatekeeper", volumeName)
-	gatekeepers.Unlock(volumeName)
-}
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
 // called by the CO before NodePublishVolume and is used to temporary mount the
@@ -90,8 +74,8 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
 
 	// Ensure that NodePublishVolume is only called once per volume
-	addGatekeeper(volumeName)
-	defer removeGatekeeper(volumeName)
+	AddGatekeeper(volumeName)
+	defer RemoveGatekeeper(volumeName)
 
 	klog.V(1).Infof("[START] publishing volume (%s) wwn (%s) target (%s)", volumeName, wwn, req.GetTargetPath())
 
@@ -161,13 +145,13 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	}
 
 	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
-	err = ensureFsType(fsType, path)
+	err = EnsureFsType(fsType, path)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	corrupted := false
-	if err = checkFs(path, "Publish"); err != nil {
+	if err = CheckFs(path, "Publish"); err != nil {
 		corrupted = true
 	}
 
@@ -179,7 +163,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 
 	if corrupted {
 		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, corrupted)
-		debugCorruption("$$", path)
+		DebugCorruption("$$", path)
 		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
 	}
 
@@ -231,8 +215,8 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
 	// Ensure that NodeUnpublishVolume is only called once per volume
-	addGatekeeper(volumeName)
-	defer removeGatekeeper(volumeName)
+	AddGatekeeper(volumeName)
+	defer RemoveGatekeeper(volumeName)
 
 	klog.Infof("[START] unpublishing volume (%s) at target path %s", volumeName, req.GetTargetPath())
 
@@ -270,7 +254,7 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	}
 	klog.Infof("connector.DevicePath (%s)", connector.DevicePath)
 
-	if isVolumeInUse(connector.DevicePath) {
+	if IsVolumeInUse(connector.DevicePath) {
 		klog.Info("volume is still in use on the node, thus it will not be detached")
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
@@ -289,9 +273,9 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 		exists = false
 	}
 
-	if err = checkFs(connector.DevicePath, "Unpublish"); err != nil {
+	if err = CheckFs(connector.DevicePath, "Unpublish"); err != nil {
 		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, true)
-		debugCorruption("!!", connector.DevicePath)
+		DebugCorruption("!!", connector.DevicePath)
 		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
@@ -368,113 +352,4 @@ func (iscsi *iscsiStorage) NodeGetCapabilities(ctx context.Context, req *csi.Nod
 // NodeGetInfo returns info about the node
 func (iscsi *iscsiStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "NodeGetInfo is not implemented")
-}
-
-// checkFs:
-func checkFs(path string, context string) error {
-	klog.Infof("Checking filesystem (e2fsck -n %s) [%s]", path, context)
-	if out, err := exec.Command("e2fsck", "-n", path).CombinedOutput(); err != nil {
-		return errors.New(string(out))
-	}
-	return nil
-}
-
-// findDeviceFormat:
-func findDeviceFormat(device string) (string, error) {
-	klog.V(2).Infof("Trying to find filesystem format on device %q", device)
-
-	ctx, cancel := context.WithTimeout(context.Background(), BlkidTimeout*time.Second)
-	defer cancel()
-	output, err := exec.CommandContext(ctx, "blkid",
-		"-p",
-		"-s", "TYPE",
-		"-s", "PTTYPE",
-		"-o", "export",
-		device).CombinedOutput()
-
-	if ctx.Err() == context.DeadlineExceeded {
-		err = fmt.Errorf("command timed out after %d seconds", BlkidTimeout)
-	}
-
-	klog.V(2).Infof("blkid output: %q, err=%v", output, err)
-
-	if err != nil {
-		// blkid exit with code 2 if the specified token (TYPE/PTTYPE, etc) could not be found or if device could not be identified.
-		if exit, ok := err.(*exec.ExitError); ok && exit.ExitCode() == 2 {
-			klog.V(2).Infof("Device seems to be is unformatted (%v)", err)
-			return "", nil
-		}
-		return "", fmt.Errorf("could not not find format for device %q (%v)", device, err)
-	}
-
-	re := regexp.MustCompile(`([A-Z]+)="?([^"\n]+)"?`) // Handles alpine and debian outputs
-	matches := re.FindAllSubmatch(output, -1)
-
-	var filesystemType, partitionType string
-	for _, match := range matches {
-		if len(match) != 3 {
-			return "", fmt.Errorf("invalid blkid output: %s", output)
-		}
-		key := string(match[1])
-		value := string(match[2])
-
-		if key == "TYPE" {
-			filesystemType = value
-		} else if key == "PTTYPE" {
-			partitionType = value
-		}
-	}
-
-	if partitionType != "" {
-		klog.V(2).Infof("Device %q seems to have a partition table type: %s", partitionType)
-		return "OTHER/PARTITIONS", nil
-	}
-
-	return filesystemType, nil
-}
-
-// ensureFsType:
-func ensureFsType(fsType string, disk string) error {
-	currentFsType, err := findDeviceFormat(disk)
-	if err != nil {
-		return err
-	}
-
-	klog.V(1).Infof("Detected filesystem: %q", currentFsType)
-	if currentFsType != fsType {
-		if currentFsType != "" {
-			return fmt.Errorf("Could not create %s filesystem on device %s since it already has one (%s)", fsType, disk, currentFsType)
-		}
-
-		klog.Infof("Creating %s filesystem on device %s", fsType, disk)
-		out, err := exec.Command(fmt.Sprintf("mkfs.%s", fsType), disk).CombinedOutput()
-		if err != nil {
-			return errors.New(string(out))
-		}
-	}
-
-	return nil
-}
-
-// isVolumeInUse: Use findmnt to determine if the devie path is mounted or not.
-func isVolumeInUse(devicePath string) bool {
-	_, err := exec.Command("findmnt", devicePath).CombinedOutput()
-	klog.Infof("isVolumeInUse: findmnt %s, err=%v", devicePath, err)
-	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			return false
-		}
-	}
-	return true
-}
-
-func debugCorruption(prefix, path string) {
-	out, err := exec.Command("ls", "-l", path).CombinedOutput()
-	klog.Infof("%s ls -l %s, err = %v, out = \n%s", prefix, path, err, string(out))
-
-	out, err = exec.Command("multipath", "-ll", "-v2", path).CombinedOutput()
-	klog.Infof("%s multipath -ll -v2 %s, err = %v, out = \n%s", prefix, path, err, string(out))
-
-	out, err = exec.Command("ls", "-lR", "/dev/disk").CombinedOutput()
-	klog.Infof("%s ls -lR /dev/disk, err = %v, out = \n%s", prefix, err, string(out))
 }

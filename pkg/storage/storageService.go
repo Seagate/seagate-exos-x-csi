@@ -19,10 +19,16 @@
 package storage
 
 import (
+	"context"
+	"fmt"
+	"os/exec"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/pkg/errors"
 	"k8s.io/klog"
 )
 
@@ -88,4 +94,129 @@ func ValidateStorageProtocol(storageProtocol string) string {
 		klog.Warningf("Expecting storageProtocol (iscsi, fc, sas, etc) in StorageClass YAML. Default of (%s) used.", common.StorageProtocolISCSI)
 		return common.StorageProtocolISCSI
 	}
+}
+
+// gateKeepers is a thread safe map indexed by volume name.
+var gatekeepers = common.NewStringLock()
+
+// addGatekeeper: Ensure that NodePublishVolume and NodeUnpublishVolume are only called once per volume
+func AddGatekeeper(volumeName string) {
+	klog.V(4).Infof("[LOCK] volume (%s) gatekeeper", volumeName)
+	gatekeepers.Lock(volumeName)
+}
+
+// removeGatekeeper: Unlock the volume function mutex when the Publish/Unpublish is complete
+func RemoveGatekeeper(volumeName string) {
+	klog.V(4).Infof("[UNLOCK] volume (%s) gatekeeper", volumeName)
+	gatekeepers.Unlock(volumeName)
+}
+
+// CheckFs: Perform a file system validation using fsck
+func CheckFs(path string, context string) error {
+	klog.Infof("Checking filesystem (e2fsck -n %s) [%s]", path, context)
+	if out, err := exec.Command("e2fsck", "-n", path).CombinedOutput(); err != nil {
+		return errors.New(string(out))
+	}
+	return nil
+}
+
+// FindDeviceFormat:
+func FindDeviceFormat(device string) (string, error) {
+	klog.V(2).Infof("Trying to find filesystem format on device %q", device)
+
+	ctx, cancel := context.WithTimeout(context.Background(), BlkidTimeout*time.Second)
+	defer cancel()
+	output, err := exec.CommandContext(ctx, "blkid",
+		"-p",
+		"-s", "TYPE",
+		"-s", "PTTYPE",
+		"-o", "export",
+		device).CombinedOutput()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		err = fmt.Errorf("command timed out after %d seconds", BlkidTimeout)
+	}
+
+	klog.V(2).Infof("blkid output: %q, err=%v", output, err)
+
+	if err != nil {
+		// blkid exit with code 2 if the specified token (TYPE/PTTYPE, etc) could not be found or if device could not be identified.
+		if exit, ok := err.(*exec.ExitError); ok && exit.ExitCode() == 2 {
+			klog.V(2).Infof("Device seems to be is unformatted (%v)", err)
+			return "", nil
+		}
+		return "", fmt.Errorf("could not not find format for device %q (%v)", device, err)
+	}
+
+	re := regexp.MustCompile(`([A-Z]+)="?([^"\n]+)"?`) // Handles alpine and debian outputs
+	matches := re.FindAllSubmatch(output, -1)
+
+	var filesystemType, partitionType string
+	for _, match := range matches {
+		if len(match) != 3 {
+			return "", fmt.Errorf("invalid blkid output: %s", output)
+		}
+		key := string(match[1])
+		value := string(match[2])
+
+		if key == "TYPE" {
+			filesystemType = value
+		} else if key == "PTTYPE" {
+			partitionType = value
+		}
+	}
+
+	if partitionType != "" {
+		klog.V(2).Infof("Device %q seems to have a partition table type: %s", partitionType)
+		return "OTHER/PARTITIONS", nil
+	}
+
+	return filesystemType, nil
+}
+
+// EnsureFsType:
+func EnsureFsType(fsType string, disk string) error {
+	currentFsType, err := FindDeviceFormat(disk)
+	if err != nil {
+		return err
+	}
+
+	klog.V(1).Infof("Detected filesystem: %q", currentFsType)
+	if currentFsType != fsType {
+		if currentFsType != "" {
+			return fmt.Errorf("Could not create %s filesystem on device %s since it already has one (%s)", fsType, disk, currentFsType)
+		}
+
+		klog.Infof("Creating %s filesystem on device %s", fsType, disk)
+		out, err := exec.Command(fmt.Sprintf("mkfs.%s", fsType), disk).CombinedOutput()
+		if err != nil {
+			return errors.New(string(out))
+		}
+	}
+
+	return nil
+}
+
+// IsVolumeInUse: Use findmnt to determine if the device path is mounted or not.
+func IsVolumeInUse(devicePath string) bool {
+	_, err := exec.Command("findmnt", devicePath).CombinedOutput()
+	klog.Infof("isVolumeInUse: findmnt %s, err=%v", devicePath, err)
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return false
+		}
+	}
+	return true
+}
+
+// DebugCorruption: Display additional information for debugging
+func DebugCorruption(prefix, path string) {
+	out, err := exec.Command("ls", "-l", path).CombinedOutput()
+	klog.Infof("%s ls -l %s, err = %v, out = \n%s", prefix, path, err, string(out))
+
+	out, err = exec.Command("multipath", "-ll", "-v2", path).CombinedOutput()
+	klog.Infof("%s multipath -ll -v2 %s, err = %v, out = \n%s", prefix, path, err, string(out))
+
+	out, err = exec.Command("ls", "-lR", "/dev/disk").CombinedOutput()
+	klog.Infof("%s ls -lR /dev/disk, err = %v, out = \n%s", prefix, err, string(out))
 }
