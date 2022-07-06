@@ -26,9 +26,9 @@ RUN ls -l /
 
 FROM redhat/ubi8
 
-ARG version=v1.2.1
-ARG vcs_ref=d2069ed88e41254ec60b5da57cf16da45423b499
-ARG build_date=2022-04-19T19:50:15+00:00
+ARG version=v1.2.3
+ARG vcs_ref=067bd4106cb6d7c951fdc16b8a55781975f40d8e
+ARG build_date=2022-06-14T04:30:14+00:00
 ARG vendor=Seagate
 ARG family="Exos X"
 ARG app="${family} CSI Driver"

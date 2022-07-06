@@ -20,6 +20,8 @@ endif
 
 IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
 
+VAGRANT = vagrant
+
 help:
 	@echo ""
 	@echo "Build Targets:"
@@ -81,6 +83,37 @@ openshift:
 	cmp Dockerfile.redhat Dockerfile.tmp && rm Dockerfile.tmp || mv Dockerfile.tmp Dockerfile.redhat
 	docker build -f Dockerfile.redhat -t $(BIN) .
 	docker inspect $(BIN):latest
+
+# See https://connect.redhat.com/projects/${REDHAT_OSPID}/setup-preflight for these keys
+REDHAT_OSPID := $(strip $(shell grep -v '\#' .redhat_ospid))
+# find this registry key in the "Upload image manually" page of your Red Hat hosted container project.
+REDHAT_REGISTRY_KEY := $(strip $(shell grep -v '\#' .redhat_registry_key))
+# find the CTP API key
+REDHAT_CTP_API_KEY := $(strip $(shell grep -v '\#' .redhat_ctp_api_key))
+REDHAT_IMAGE_TAG := scan.connect.redhat.com/ospid-${REDHAT_OSPID}/$(BIN):${VERSION}
+openshift-upload:
+	docker login -u unused -p ${REDHAT_REGISTRY_KEY} scan.connect.redhat.com
+	docker tag $(BIN):latest ${REDHAT_IMAGE_TAG}
+	docker push ${REDHAT_IMAGE_TAG}
+
+openshift-setup-preflight:
+	test -d ~/openshift-preflight || (cd ~ && git clone https://github.com/redhat-openshift-ecosystem/openshift-preflight.git)
+	cd ~/openshift-preflight
+	$(VAGRANT) up
+	$(VAGRANT) ssh -c "make -C preflight build"
+
+openshift-preflight:
+	cd ~/openshift-preflight; $(VAGRANT) ssh -c "\
+		podman login -u unused -p ${REDHAT_REGISTRY_KEY} scan.connect.redhat.com; \
+		cd preflight && \
+		./preflight --loglevel debug -d \$${XDG_RUNTIME_DIR}/containers/auth.json \
+			check container ${REDHAT_IMAGE_TAG} \
+			--pyxis-api-token=${REDHAT_CTP_API_KEY} \
+			--certification-project-id=${REDHAT_OSPID} \
+			${PREFLIGHT_EXTRA_ARGS}"
+
+openshift-submit:
+	make openshift-preflight PREFLIGHT_EXTRA_ARGS=--submit
 
 push:
 	@echo ""

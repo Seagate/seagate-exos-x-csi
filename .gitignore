@@ -21,3 +21,8 @@ test/secrets.yml
 test/volume.yml
 test/sanity.log
 test/.env
+
+# OpenShift Registry data
+.redhat_*
+*secrets*
+
