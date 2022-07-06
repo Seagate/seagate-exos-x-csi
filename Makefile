@@ -18,6 +18,12 @@ ifndef BIN
 	BIN = seagate-exos-x-csi
 endif
 
+HELM_VERSION := 1.0.0
+ifdef HELM_KEY
+  HELM_KEYRING := --keyring ~/.gnupg/secring.gpg
+  HELM_SIGN := --sign --key $(HELM_KEY) $(HELM_KEYRING)
+endif 
+
 IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
 
 help:
@@ -91,3 +97,17 @@ clean:
 	@echo ""
 	@echo "[] clean"
 	rm -vf $(BIN)-controller $(BIN)-node
+
+
+# Create a helm package that can be installed from a remote HTTPS URL with, e.g.
+# helm install seagate-csi https://<server>/<path>/seagate-exos-x-csi-1.0.0.tgz
+helm-package:  $(BIN)-$(HELM_VERSION).tgz
+
+# Note that helm doesn't support GPG v2.1 kbx files.  If signing fails, try:
+# gpg --export-secret-keys > ~/.gnupg/secring.gpg
+$(BIN)-$(HELM_VERSION).tgz:
+	cd helm; helm package $(HELM_SIGN) $$PWD/csi-charts
+	mv helm/$(BIN)-$(HELM_VERSION).tgz* .
+ifdef HELM_KEYRING
+	helm verify $(HELM_KEYRING) $(BIN)-$(HELM_VERSION).tgz
+endif
