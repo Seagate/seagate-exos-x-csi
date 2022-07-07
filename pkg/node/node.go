@@ -140,10 +140,8 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	klog.Infof("NodePublishVolume called with volume name %s", volumeName)
 
 	config := make(map[string]string)
-	if storageProtocol == common.StorageProtocolISCSI {
-		config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
-		klog.V(2).Infof("NodePublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
-	}
+	config["connectorInfoPath"] = node.getConnectorInfoPath(storageProtocol, volumeName)
+	klog.V(2).Infof("NodePublishVolume connectorInfoPath (%v)", config["connectorInfoPath"])
 
 	// Get storage handler
 	storageNode, err := storage.NewStorageNode(storageProtocol, config)
@@ -165,8 +163,8 @@ func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublis
 	klog.Infof("NodeUnpublishVolume volume %s at target path %s", volumeName, req.GetTargetPath())
 
 	config := make(map[string]string)
-	config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
-	klog.V(2).Infof("NodeUnpublishVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
+	config["connectorInfoPath"] = node.getConnectorInfoPath(storageProtocol, volumeName)
+	klog.V(2).Infof("NodeUnpublishVolume connectorInfoPath (%v)", config["connectorInfoPath"])
 
 	// Get storage handler
 	storageNode, err := storage.NewStorageNode(storageProtocol, config)
@@ -188,8 +186,8 @@ func (node *Node) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 	klog.Infof("NodeExpandVolume volume %s at volume path %s", volumeName, req.GetVolumePath())
 
 	config := make(map[string]string)
-	config["iscsiInfoPath"] = node.getIscsiInfoPath(volumeName)
-	klog.V(2).Infof("NodeExpandVolume iscsiInfoPath (%v)", config["iscsiInfoPath"])
+	config["connectorInfoPath"] = node.getConnectorInfoPath(storageProtocol, volumeName)
+	klog.V(2).Infof("NodeExpandVolume connectorInfoPath (%v)", config["connectorInfoPath"])
 
 	// Get storage handler
 	storageNode, err := storage.NewStorageNode(storageProtocol, config)
@@ -228,9 +226,9 @@ func (node *Node) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeR
 	return &csi.ProbeResponse{Ready: &wrappers.BoolValue{Value: true}}, nil
 }
 
-// getIscsiInfoPath
-func (node *Node) getIscsiInfoPath(volumeID string) string {
-	return fmt.Sprintf("%s/iscsi-%s.json", node.runPath, volumeID)
+// getConnectorInfoPath
+func (node *Node) getConnectorInfoPath(storageProtocol, volumeID string) string {
+	return fmt.Sprintf("%s/%s-%s.json", node.runPath, storageProtocol, volumeID)
 }
 
 // checkHostBinary: Determine if a binary image is installed or not
@@ -244,7 +242,7 @@ func checkHostBinary(name string) error {
 	return nil
 }
 
-// readInitiatorName: Extract the initiaotr name from /etc/iscsi file
+// readInitiatorName: Extract the initiator name from /etc/iscsi file
 func readInitiatorName() (string, error) {
 	initiatorNameFilePath := "/etc/iscsi/initiatorname.iscsi"
 	file, err := os.Open(initiatorNameFilePath)
