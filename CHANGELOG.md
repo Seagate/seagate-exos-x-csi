@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.3...v1.3.0) (2022-07-07)
+
+### Features
+
+- Add SAS support, NodePublishVolume added, using csi-lib-sas ([a542cdf](https://github.com/Seagate/seagate-exos-x-csi/commit/a542cdf01099b89bdcff33415c1c8958411d5146))
+- Additional updates for SAS support ([38a2056](https://github.com/Seagate/seagate-exos-x-csi/commit/38a20561eff1176cc8680b444210d03b7db65646))
+- Updated multipath.conf example in docs/sas ([d4ea31f](https://github.com/Seagate/seagate-exos-x-csi/commit/d4ea31fc5634cc5483edc7aec765533caf3dbb02))
+
+### Other
+
+- Merge pull request #46 from Seagate/feat/sas ([4cec69c](https://github.com/Seagate/seagate-exos-x-csi/commit/4cec69c9d5d123353c6ee90aa77a9b6f8a5e7f62)), closes [#46](https://github.com/Seagate/seagate-exos-x-csi/issues/46)
+
 ## [1.2.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.2...v1.2.3) (2022-06-01)
 
 ### Bug Fixes
