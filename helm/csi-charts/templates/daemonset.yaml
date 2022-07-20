@@ -86,6 +86,10 @@ spec:
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      {{- end }}
       volumes:
         - name: registration-dir
           hostPath:

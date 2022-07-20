@@ -76,6 +76,10 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      {{- end }}
       volumes:
         - name: socket-dir
           emptyDir:
