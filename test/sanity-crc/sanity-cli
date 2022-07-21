@@ -1,0 +1,60 @@
+#! /usr/bin/env bash
+
+# Adapted version of the sanity-cli script for use in the sanity pod 
+# 
+# Usage: sanity-cli [all]
+#
+# Running ./sanity-cli
+#     Will fail fast (-ginkgo.failFast) and use -ginkgo.focus based on TEST_FOCUS
+#     Use `export TEST_FOCUS=<item>`, such as <item> = CreateVolume to limit test cases
+#
+# Running ./sanity-cli all
+#     Will run all test cases and continue past failures
+#
+
+opt=$1
+
+echo ""
+echo "[] sanity-cli $opt"
+
+
+secretsTemplate="secrets.template.yml"
+secrets="secrets.yml"
+volumeTemplate="volume.template.yml"
+volume="volume.yml"
+
+set -e
+
+function setVariables()
+{
+    echo ""
+    echo "env variables:"
+
+    test_focus=$TEST_FOCUS
+    echo "-- TEST_FOCUS = $test_focus"
+}
+
+setVariables
+
+controller=unix:///csi/controller.sock
+node=unix:///csi/node.sock
+sanity=/csi-sanity
+
+focus=${test_focus}
+
+echo ""
+echo "[] csi-sanity"
+
+if [ "$opt" == "all" ]; then
+    echo "sudo ${sanity} -csi.controllerendpoint ${controller} -csi.endpoint ${node} -csi.secrets ${secrets} -csi.testvolumeparameters ${volume}"
+    sudo ${sanity} -csi.controllerendpoint ${controller} -csi.endpoint ${node} -csi.secrets ${secrets} -csi.testvolumeparameters ${volume} 
+
+else
+    echo "sudo ${sanity} -csi.controllerendpoint ${controller} -csi.endpoint ${node} -csi.secrets ${secrets} -ginkgo.focus \"${focus}\" -csi.testvolumeparameters ${volume} -ginkgo.failFast"
+    sudo ${sanity} -csi.controllerendpoint ${controller} -csi.endpoint ${node} -csi.secrets ${secrets} -ginkgo.focus "${focus}" -csi.testvolumeparameters ${volume} -ginkgo.failFast 
+
+fi
+
+out=$?
+
+exit ${out}

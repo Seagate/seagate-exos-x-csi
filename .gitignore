@@ -21,3 +21,7 @@ test/secrets.yml
 test/volume.yml
 test/sanity.log
 test/.env
+test/sanity-crc/secrets.yml
+test/sanity-crc/volume.yml
+test/sanity-crc/csi-sanity
+test/sanity-crc/sanity-crc.yaml
