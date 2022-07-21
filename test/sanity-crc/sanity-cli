@@ -12,11 +12,7 @@
 #     Will run all test cases and continue past failures
 #
 
-if [ -z ${1+x} ]; then
-    opt=
-else
-    opt=$1
-fi
+opt=$1
 
 echo ""
 echo "[] sanity-cli $opt"
