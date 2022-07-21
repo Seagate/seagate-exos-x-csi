@@ -31,10 +31,6 @@ function setVariables()
     echo "env variables:"
 
     test_focus=$TEST_FOCUS
-    if [ -z "$test_focus" ]
-    then
-        test_focus=
-    fi
     echo "-- TEST_FOCUS = $test_focus"
 }
 
