@@ -71,13 +71,10 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 
 	klog.V(1).Infof("[START] publish volume (%s) wwn (%s) target (%s) lun (%s)", volumeName, wwn, req.GetTargetPath(), lun)
 
-	wwns := req.GetVolumeContext()[common.WWNs]
-	klog.Infof("SAS WWNS: %s", wwns)
-
 	// Initiate SAS attachment
 	klog.Info("initiating SAS connection...")
-	connector := saslib.Connector{Lun: lun, TargetWWNs: []string{wwns}}
-	path, err := saslib.Attach(ctx, connector, &saslib.OSioHandler{})
+	connector := saslib.Connector{TargetWWN: wwn}
+	path, err := saslib.Attach(ctx, &connector, &saslib.OSioHandler{})
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
@@ -101,7 +98,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	}
 
 	if corrupted {
-		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, corrupted)
+		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, corrupted=%v", connector.TargetDevice, volumeName, connector.Multipath, wwn, corrupted)
 		DebugCorruption("$$", path)
 		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
 	}
@@ -191,14 +188,14 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	klog.Infof("connector.DevicePath (%s)", connector.DevicePath)
+	klog.Infof("connector.TargetDevice (%s)", connector.TargetDevice)
 
-	if IsVolumeInUse(connector.DevicePath) {
+	if IsVolumeInUse(connector.TargetDevice) {
 		klog.Info("volume is still in use on the node, thus it will not be detached")
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
-	_, err = os.Stat(connector.DevicePath)
+	_, err = os.Stat(connector.TargetDevice)
 	if err != nil && os.IsNotExist(err) {
 		klog.Warningf("assuming that volume is already disconnected: %s", err)
 		return &csi.NodeUnpublishVolumeResponse{}, nil
@@ -212,14 +209,14 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 		exists = false
 	}
 
-	if err = CheckFs(connector.DevicePath, "Unpublish"); err != nil {
-		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, true)
-		DebugCorruption("!!", connector.DevicePath)
+	if err = CheckFs(connector.TargetDevice, "Unpublish"); err != nil {
+		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.TargetDevice, volumeName, connector.Multipath, wwn, exists, true)
+		DebugCorruption("!!", connector.TargetDevice)
 		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
 	klog.Info("DisconnectVolume, detaching SAS device")
-	err = saslib.Detach(ctx, connector.DevicePath, connector.IoHandler)
+	err = saslib.Detach(ctx, connector.TargetDevice, connector.IoHandler)
 
 	if err != nil {
 		return nil, err
@@ -262,15 +259,15 @@ func (sas *sasStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeExpand
 
 	if connector.Multipath {
 		klog.V(2).Info("device is using multipath")
-		if err := saslib.ResizeMultipathDevice(ctx, connector.DevicePath); err != nil {
+		if err := saslib.ResizeMultipathDevice(ctx, connector.TargetDevice); err != nil {
 			return nil, err
 		}
 	} else {
 		klog.V(2).Info("device is NOT using multipath")
 	}
 
-	klog.Infof("expanding filesystem using resize2fs on device %s", connector.DevicePath)
-	output, err := exec.Command("resize2fs", connector.DevicePath).CombinedOutput()
+	klog.Infof("expanding filesystem using resize2fs on device %s", connector.TargetDevice)
+	output, err := exec.Command("resize2fs", connector.TargetDevice).CombinedOutput()
 	if err != nil {
 		klog.V(2).Info("could not resize filesystem: %v", output)
 		return nil, fmt.Errorf("could not resize filesystem: %v", output)
