@@ -1,3 +1,13 @@
+## [1.3.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.1...v1.3.2) (2022-08-03)
+
+### Chores
+
+- **deps-dev:** bump semantic-release from 18.0.1 to 19.0.3 ([864e291](https://github.com/Seagate/seagate-exos-x-csi/commit/864e29191daae0f92c2cd3a38c67a3c83e41f6d2))
+
+### Other
+
+- Merge pull request #44 from Seagate/dependabot/npm_and_yarn/semantic-release-19.0.3 ([d2b9847](https://github.com/Seagate/seagate-exos-x-csi/commit/d2b9847d033bf3e71625affec991ccffe1bb3068)), closes [#44](https://github.com/Seagate/seagate-exos-x-csi/issues/44)
+
 ## [1.3.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.0...v1.3.1) (2022-08-03)
 
 ### Chores
