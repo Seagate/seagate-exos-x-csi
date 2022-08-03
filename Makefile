@@ -18,23 +18,32 @@ ifndef BIN
 	BIN = seagate-exos-x-csi
 endif
 
+HELM_VERSION := 1.0.0
+HELM_KEY := css-host-software
+# $HELM_KEY should be the name of a secret key in the invoker's default keyring
+ifneq (,$(HELM_KEY))
+  HELM_KEYRING := --keyring ~/.gnupg/secring.gpg
+  HELM_SIGN := --sign --key $(HELM_KEY) $(HELM_KEYRING)
+endif 
+
 IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
 
 help:
 	@echo ""
 	@echo "Build Targets:"
 	@echo "-----------------------------------------------------------------------------------"
-	@echo "make clean      - remove '$(BIN)-controller' and '$(BIN)-node'"
-	@echo "make all        - clean, create driver images, create ubi docker image, push to registry"
-	@echo "make bin        - create controller and node driver images"
-	@echo "make controller - create controller driver image ($(BIN)-controller)"
-	@echo "make node       - create node driver image ($(BIN)-node)"
-	@echo "make test       - build test/sanity"
-	@echo "make image      - create a repo docker image ($(IMAGE))"
-	@echo "make limage     - create a local docker image ($(IMAGE))"
-	@echo "make ubi        - create a local docker image using Redhat UBI ($(IMAGE))"
-	@echo "make openshift  - Create OpenShift-certification candidate image ($(IMAGE))"
-	@echo "make push       - push the docker image to '$(DOCKER_HUB_REPOSITORY)'"
+	@echo "make all          - clean, create driver images, create ubi docker image, push to registry"
+	@echo "make bin          - create controller and node driver images"
+	@echo "make clean        - remove '$(BIN)-controller' and '$(BIN)-node'"
+	@echo "make controller   - create controller driver image ($(BIN)-controller)"
+	@echo "make helm-package - create signed helm package using HELM_VERSION, HELM_KEY environment variables"
+	@echo "make image        - create a repo docker image ($(IMAGE))"
+	@echo "make limage       - create a local docker image ($(IMAGE))"
+	@echo "make node         - create node driver image ($(BIN)-node)"
+	@echo "make openshift    - Create OpenShift-certification candidate image ($(IMAGE))"
+	@echo "make push         - push the docker image to '$(DOCKER_HUB_REPOSITORY)'"
+	@echo "make test         - build test/sanity"
+	@echo "make ubi          - create a local docker image using Redhat UBI ($(IMAGE))"
 	@echo ""
 
 all: clean bin ubi push
@@ -90,4 +99,21 @@ push:
 clean:
 	@echo ""
 	@echo "[] clean"
-	rm -vf $(BIN)-controller $(BIN)-node
+	rm -vf $(BIN)-controller $(BIN)-node *.zip *.tgz *.prov helm/$(BIN)-$(HELM_VERSION)*
+
+
+# Create a helm package that can be installed from a remote HTTPS URL with, e.g.
+# helm install seagate-csi https://<server>/<path>/seagate-exos-x-csi-1.0.0.tgz
+HELM_PACKAGE := $(BIN)-$(HELM_VERSION).tgz
+helm-package: $(HELM_PACKAGE)
+
+# To create a package without signing it, specify "make helm-package HELM_KEY="
+# Note that helm doesn't support GPG v2.1 kbx files.  If signing fails, try:
+# gpg --export-secret-keys > ~/.gnupg/secring.gpg
+$(HELM_PACKAGE):
+	cd helm; helm package $(HELM_SIGN) $$PWD/csi-charts
+	cp -p helm/$@* .
+ifdef HELM_KEYRING
+	helm verify $(HELM_KEYRING) $@
+	zip -r $(subst .tgz,-signed-helm-package.zip,$@) $@ $@.prov
+endif
