@@ -1,3 +1,13 @@
+## [1.3.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.2...v1.3.3) (2022-08-03)
+
+### Chores
+
+- update Makefile to support creating a signed helm package ([24d081b](https://github.com/Seagate/seagate-exos-x-csi/commit/24d081b51f3b965833d03500ef009e518e25b08f))
+
+### Tests
+
+- add option to specify imagePullSecrets (#47) ([b52c927](https://github.com/Seagate/seagate-exos-x-csi/commit/b52c927b6e8b69441ba1da0eaf6eed9a9f5a16a7)), closes [#47](https://github.com/Seagate/seagate-exos-x-csi/issues/47)
+
 ## [1.3.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.1...v1.3.2) (2022-08-03)
 
 ### Chores
