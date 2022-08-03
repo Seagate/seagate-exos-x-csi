@@ -1,3 +1,14 @@
+## [1.3.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.0...v1.3.1) (2022-08-03)
+
+### Chores
+
+- **deps:** bump semver-regex from 3.1.3 to 3.1.4 ([f3686f3](https://github.com/Seagate/seagate-exos-x-csi/commit/f3686f308e882730a811dde824ae8668dd70759d))
+
+### Other
+
+- Merge pull request #43 from Seagate/dependabot/npm_and_yarn/semver-regex-3.1.4 ([e4d0b98](https://github.com/Seagate/seagate-exos-x-csi/commit/e4d0b981f4d41b5a93fbdd0450856038e1dd95f2)), closes [#43](https://github.com/Seagate/seagate-exos-x-csi/issues/43)
+- Test/sanity crc (#35) ([3bd1fa8](https://github.com/Seagate/seagate-exos-x-csi/commit/3bd1fa8901a5720156caa5b0dc512699d56b94ac)), closes [#35](https://github.com/Seagate/seagate-exos-x-csi/issues/35)
+
 # [1.3.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.2.3...v1.3.0) (2022-07-07)
 
 ### Features
