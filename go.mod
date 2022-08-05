@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Seagate/csi-lib-iscsi v1.0.3
-	github.com/Seagate/csi-lib-sas v1.0.0
+	github.com/Seagate/csi-lib-sas v1.0.1
 	github.com/Seagate/seagate-exos-x-api-go v1.0.8-0.20220531203625-3d1a38b18ac6
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/container-storage-interface/spec v1.4.0
@@ -26,4 +26,4 @@ require (
 
 // replace github.com/Seagate/seagate-exos-x-api-go => ../seagate-exos-x-api-go
 // replace github.com/Seagate/csi-lib-iscsi => ../csi-lib-iscsi
-replace github.com/Seagate/csi-lib-sas => ../csi-lib-sas
+// replace github.com/Seagate/csi-lib-sas => ../csi-lib-sas

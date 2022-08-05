@@ -73,7 +73,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 
 	// Initiate SAS attachment
 	klog.Info("initiating SAS connection...")
-	connector := saslib.Connector{TargetWWN: wwn}
+	connector := saslib.Connector{VolumeWWN: wwn}
 	path, err := saslib.Attach(ctx, &connector, &saslib.OSioHandler{})
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
@@ -98,7 +98,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	}
 
 	if corrupted {
-		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, corrupted=%v", connector.TargetDevice, volumeName, connector.Multipath, wwn, corrupted)
+		klog.Infof("device corruption (publish), device=%v, volume=%s, multipath=%v, wwn=%v, corrupted=%v", connector.OSPathName, volumeName, connector.Multipath, wwn, corrupted)
 		DebugCorruption("$$", path)
 		return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
 	}
@@ -188,14 +188,14 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	klog.Infof("connector.TargetDevice (%s)", connector.TargetDevice)
+	klog.Infof("connector.OSPathName (%s)", connector.OSPathName)
 
-	if IsVolumeInUse(connector.TargetDevice) {
+	if IsVolumeInUse(connector.OSPathName) {
 		klog.Info("volume is still in use on the node, thus it will not be detached")
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
-	_, err = os.Stat(connector.TargetDevice)
+	_, err = os.Stat(connector.OSPathName)
 	if err != nil && os.IsNotExist(err) {
 		klog.Warningf("assuming that volume is already disconnected: %s", err)
 		return &csi.NodeUnpublishVolumeResponse{}, nil
@@ -209,14 +209,14 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 		exists = false
 	}
 
-	if err = CheckFs(connector.TargetDevice, "Unpublish"); err != nil {
-		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.TargetDevice, volumeName, connector.Multipath, wwn, exists, true)
-		DebugCorruption("!!", connector.TargetDevice)
+	if err = CheckFs(connector.OSPathName, "Unpublish"); err != nil {
+		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.OSPathName, volumeName, connector.Multipath, wwn, exists, true)
+		DebugCorruption("!!", connector.OSPathName)
 		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
 	klog.Info("DisconnectVolume, detaching SAS device")
-	err = saslib.Detach(ctx, connector.TargetDevice, connector.IoHandler)
+	err = saslib.Detach(ctx, connector.OSPathName, connector.IoHandler)
 
 	if err != nil {
 		return nil, err
@@ -259,15 +259,15 @@ func (sas *sasStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeExpand
 
 	if connector.Multipath {
 		klog.V(2).Info("device is using multipath")
-		if err := saslib.ResizeMultipathDevice(ctx, connector.TargetDevice); err != nil {
+		if err := saslib.ResizeMultipathDevice(ctx, connector.OSPathName); err != nil {
 			return nil, err
 		}
 	} else {
 		klog.V(2).Info("device is NOT using multipath")
 	}
 
-	klog.Infof("expanding filesystem using resize2fs on device %s", connector.TargetDevice)
-	output, err := exec.Command("resize2fs", connector.TargetDevice).CombinedOutput()
+	klog.Infof("expanding filesystem using resize2fs on device %s", connector.OSPathName)
+	output, err := exec.Command("resize2fs", connector.OSPathName).CombinedOutput()
 	if err != nil {
 		klog.V(2).Info("could not resize filesystem: %v", output)
 		return nil, fmt.Errorf("could not resize filesystem: %v", output)
