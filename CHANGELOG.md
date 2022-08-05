@@ -1,3 +1,22 @@
+# [1.4.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.3...v1.4.0) (2022-08-05)
+
+### Bug Fixes
+
+- update version in helm and Makefile ([60a7542](https://github.com/Seagate/seagate-exos-x-csi/commit/60a75428df3ca9ca688a6a768e1b69ef25f29267))
+
+### Chores
+
+- upgrade Seagate/csi-lib-sas => v1.0.0 ([db1dca9](https://github.com/Seagate/seagate-exos-x-csi/commit/db1dca9845d91cb1d3d6bb1b85ab4cc850bc163c))
+
+### Features
+
+- adjust csi driver to match sas lin changes ([22c8a5f](https://github.com/Seagate/seagate-exos-x-csi/commit/22c8a5f8854dfa556a70db9ceeeea09f4e8c5759))
+- SAS Connector name updates and comments ([1b7553c](https://github.com/Seagate/seagate-exos-x-csi/commit/1b7553cf27c3f444bfd33534775918293db58e64))
+
+### Other
+
+- Merge pull request #48 from Seagate/feat/saswwn ([335bd68](https://github.com/Seagate/seagate-exos-x-csi/commit/335bd68e2e0c98abdcd11dd7ab6c4734cba08861)), closes [#48](https://github.com/Seagate/seagate-exos-x-csi/issues/48)
+
 ## [1.3.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.2...v1.3.3) (2022-08-03)
 
 ### Chores
