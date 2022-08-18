@@ -1,3 +1,17 @@
+# [1.5.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.4.0...v1.5.0) (2022-08-18)
+
+### Chores
+
+- Updated the version based on the new FC feature ([481a21b](https://github.com/Seagate/seagate-exos-x-csi/commit/481a21b80f04dc0aef02cae70b8b8ff35409383c))
+
+### Features
+
+- Fibre Channel interface layer support, leveraging SAS library ([92f00c6](https://github.com/Seagate/seagate-exos-x-csi/commit/92f00c680bdb5b819593c9487fcc6bf475929c65))
+
+### Other
+
+- Merge pull request #49 from Seagate/feat/fc ([12a5922](https://github.com/Seagate/seagate-exos-x-csi/commit/12a592255ef265e1ab56317e2564e48a8de8eab9)), closes [#49](https://github.com/Seagate/seagate-exos-x-csi/issues/49)
+
 # [1.4.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.3.3...v1.4.0) (2022-08-05)
 
 ### Bug Fixes
