@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	storageapi "github.com/Seagate/seagate-exos-x-api-go"
@@ -59,7 +60,8 @@ var nonAuthenticatedMethods = []string{
 type Controller struct {
 	*common.Driver
 
-	client *storageapi.Client
+	client  *storageapi.Client
+	runPath string
 }
 
 // DriverCtx contains data common to most calls
@@ -73,8 +75,13 @@ type DriverCtx struct {
 func New() *Controller {
 	client := storageapi.NewClient()
 	controller := &Controller{
-		Driver: common.NewDriver(client.Collector),
-		client: client,
+		Driver:  common.NewDriver(client.Collector),
+		client:  client,
+		runPath: fmt.Sprintf("/var/run/%s", common.PluginName),
+	}
+
+	if err := os.MkdirAll(controller.runPath, 0755); err != nil {
+		panic(err)
 	}
 
 	controller.InitServer(

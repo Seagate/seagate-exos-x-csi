@@ -3,9 +3,12 @@ package node
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Seagate/csi-lib-iscsi/iscsi"
@@ -103,9 +106,24 @@ func (node *Node) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) 
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
+	topology := map[string]string{}
+	sasAddresses, err := getSASAddresses()
+	if err != nil {
+		klog.Infof("Error while searching for SAS HBA Addresses: %s", err)
+	}
+
+	for i, sasAddr := range sasAddresses {
+		//maximum value length 63 chars
+		topoKey := common.TopologyPrefix + "/" + "sas-address-" + strconv.Itoa(i)
+		topology[topoKey] = sasAddr
+	}
+
 	return &csi.NodeGetInfoResponse{
 		NodeId:            initiatorName,
 		MaxVolumesPerNode: 255,
+		AccessibleTopology: &csi.Topology{
+			Segments: topology,
+		},
 	}, nil
 }
 
@@ -244,6 +262,7 @@ func checkHostBinary(name string) error {
 
 // readInitiatorName: Extract the initiator name from /etc/iscsi file
 func readInitiatorName() (string, error) {
+
 	initiatorNameFilePath := "/etc/iscsi/initiatorname.iscsi"
 	file, err := os.Open(initiatorNameFilePath)
 	if err != nil {
@@ -266,4 +285,78 @@ func readInitiatorName() (string, error) {
 	}
 
 	return "", fmt.Errorf("InitiatorName key is missing from %s", initiatorNameFilePath)
+}
+
+// Read the sas address configuration file and return addresses
+func readSASAddrFile() ([]string, error) {
+
+	SASFilePath := "/etc/kubernetes/sas-addresses"
+	file, err := os.Open(SASFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	foundAddresses := []string{}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		foundAddresses = append(foundAddresses, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return foundAddresses, nil
+}
+
+// Retrieve SAS Host addresses for the node
+func getSASAddresses() ([]string, error) {
+
+	// look for file specifying addresses. Skip discovery process if it exists
+	foundAddresses, err := readSASAddrFile()
+	if err == nil && foundAddresses != nil {
+		klog.Infof("using SAS addresses from config file: %v", foundAddresses)
+		return foundAddresses, nil
+	} else if errors.Is(err, os.ErrNotExist) {
+		klog.Infof("SAS address config file not found")
+	} else if err != nil {
+		klog.Warningf("error attempting to read SAS host address file: %s", err)
+	}
+
+	klog.Infof("begin SAS address discovery")
+	sasAddrFilename := "host_sas_address"
+	scsiHostBasePath := "/sys/class/scsi_host/"
+
+	dirList, err := os.ReadDir(scsiHostBasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hostDir := range dirList {
+		sasAddrFile := filepath.Join(scsiHostBasePath, hostDir.Name(), sasAddrFilename)
+		addrBytes, err := os.ReadFile(sasAddrFile)
+		address := string(addrBytes)
+		address = strings.TrimLeft(strings.TrimRight(address, "\n"), "0x")
+
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			} else {
+				klog.Warningf("error searching for HBA addresses: %v", err)
+				return nil, err
+			}
+		} else {
+			klog.Infof("found HBA address %s", address)
+			if firstAddress, err := strconv.ParseInt(address, 16, 0); err != nil {
+				return nil, err
+			} else {
+				secondAddress := strconv.FormatInt(firstAddress+1, 16)
+				foundAddresses = append(foundAddresses, address, secondAddress)
+			}
+		}
+	}
+	return foundAddresses, nil
 }

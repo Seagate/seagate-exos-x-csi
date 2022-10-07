@@ -17,6 +17,7 @@ image:
   pullPolicy: Always
 
 # -- Controller sidecar for provisioning
+# AKA external-provisioner
 csiProvisioner:
   image:
     repository: k8s.gcr.io/sig-storage/csi-provisioner
@@ -24,7 +25,7 @@ csiProvisioner:
   # -- Timeout for gRPC calls from the csi-provisioner to the controller
   timeout: 30s
   # -- Extra arguments for csi-provisioner controller sidecar
-  extraArgs: []
+  extraArgs: [--feature-gates=Topology=true]
 
 # -- Controller sidecar for attachment handling
 csiAttacher:

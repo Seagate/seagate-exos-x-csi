@@ -38,6 +38,7 @@ const (
 	StorageProtocolISCSI      = "iscsi"
 	StorageProtocolFC         = "fc"
 	StorageProtocolSAS        = "sas"
+	TopologyPrefix            = "seagate-exos-x-csi"
 
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 32

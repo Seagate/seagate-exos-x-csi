@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
@@ -23,10 +24,27 @@ var (
 	}
 )
 
+// Extract available SAS addresses for the Node from topology segments
+func parseTopology(topology []*csi.Topology, parameters *map[string]string) error {
+	klog.Infof("Topology: %v", topology)
+
+	for _, topo := range topology {
+		for key, val := range topo.GetSegments() {
+			if strings.Contains(key, "seagate-exos-x-csi/sas-address") {
+				(*parameters)[key] = val
+			}
+		}
+	}
+	return nil
+}
+
 // CreateVolume creates a new volume from the given request. The function is idempotent.
 func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 
 	parameters := req.GetParameters()
+	//insert topology keys into the parameters map, so they will be available in ControllerPublishVolume
+	parseTopology(req.GetAccessibilityRequirements().GetRequisite(), &parameters)
+
 	volumeName, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "translate volume name contains invalid characters")
@@ -35,7 +53,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	// Extract the storage interface protocol to be used for this volume (iscsi, fc, sas, etc)
 	storageProtocol := storage.ValidateStorageProtocol(parameters[common.StorageProtocolKey])
 
-	if common.ValidateName(volumeName) == false {
+	if !common.ValidateName(volumeName) {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
 	}
 
