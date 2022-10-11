@@ -28,9 +28,10 @@ var (
 func parseTopology(topology []*csi.Topology, parameters *map[string]string) error {
 	klog.Infof("Topology: %v", topology)
 
+	sasAddressSearchString := fmt.Sprintf("%s/%s", common.TopologyInitiatorPrefix, common.TopologySASInitiatorLabel)
 	for _, topo := range topology {
 		for key, val := range topo.GetSegments() {
-			if strings.Contains(key, "seagate-exos-x-csi/sas-address") {
+			if strings.Contains(key, sasAddressSearchString) {
 				(*parameters)[key] = val
 			}
 		}

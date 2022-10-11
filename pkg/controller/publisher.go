@@ -79,7 +79,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	// Available SAS initiators for the node are provided here through NodeGetInfo
 	if parameters[common.StorageProtocolKey] == common.StorageProtocolSAS {
 		for key, val := range parameters {
-			if strings.Contains(key, common.TopologyPrefix) {
+			if strings.Contains(key, common.TopologyInitiatorPrefix) {
 				initiatorNames = append(initiatorNames, val)
 			}
 		}
@@ -111,8 +111,6 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
-	//TODO: Use initiator from persistent file here. Similar to NodeUnpublish.
-	// Do this for all cases or only for some?
 	var initiators []string
 	var err error
 	if protocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId()); protocol == common.StorageProtocolSAS {
@@ -126,14 +124,13 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 
 	klog.Infof("unmapping volume %s from initiator %s", volumeName, initiators)
 	for _, initiator := range initiators {
-		//TODO: Optimize for minimal API calls
 		_, status, err := driver.client.UnmapVolume(volumeName, initiator)
 		if err != nil {
 			if status != nil && status.ReturnCode == unmapFailedErrorCode {
 				klog.Info("unmap failed, assuming volume is already unmapped")
-				return &csi.ControllerUnpublishVolumeResponse{}, nil
+			} else {
+				klog.Errorf("unknown error while unmapping initiator %s: %v", initiator, err)
 			}
-			return nil, err
 		}
 	}
 

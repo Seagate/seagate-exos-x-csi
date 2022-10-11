@@ -38,7 +38,8 @@ const (
 	StorageProtocolISCSI      = "iscsi"
 	StorageProtocolFC         = "fc"
 	StorageProtocolSAS        = "sas"
-	TopologyPrefix            = "seagate-exos-x-csi"
+	TopologyInitiatorPrefix   = "com.seagate-exos-x-csi"
+	TopologySASInitiatorLabel = "sas-address"
 
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 32

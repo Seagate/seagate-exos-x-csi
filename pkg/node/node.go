@@ -114,7 +114,7 @@ func (node *Node) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) 
 
 	for i, sasAddr := range sasAddresses {
 		//maximum value length 63 chars
-		topoKey := common.TopologyPrefix + "/" + "sas-address-" + strconv.Itoa(i)
+		topoKey := fmt.Sprintf("%s/%s-%d", common.TopologyInitiatorPrefix, common.TopologySASInitiatorLabel, i)
 		topology[topoKey] = sasAddr
 	}
 
