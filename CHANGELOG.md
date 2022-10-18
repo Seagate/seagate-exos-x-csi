@@ -1,3 +1,13 @@
+## [1.5.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.0...v1.5.1) (2022-10-18)
+
+### Bug Fixes
+
+- Add volume mount for controller run dir ([fae23f8](https://github.com/Seagate/seagate-exos-x-csi/commit/fae23f844b4383a30ca4a34180c2d68563913fac))
+
+### Other
+
+- Fix/sas initiator (#50) ([edcbd81](https://github.com/Seagate/seagate-exos-x-csi/commit/edcbd81f5d6276bcfcef2392849b0c9ea3b03852)), closes [#50](https://github.com/Seagate/seagate-exos-x-csi/issues/50)
+
 # [1.5.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.4.0...v1.5.0) (2022-08-18)
 
 ### Chores
