@@ -58,6 +58,7 @@ The preferred installation approach is to use the provided `Helm Charts` under t
 ```
     oc create -f scc/exos-x-csi-access-scc.yaml --as system:admin
     oc adm policy add-scc-to-user exos-x-csi-access -z default -n NAMESPACE
+    oc adm policy add-scc-to-user exos-x-csi-access -z csi-provisioner -n NAMESPACE
 ```
 
 #### Configure your release
