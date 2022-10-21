@@ -1,3 +1,9 @@
+## [1.5.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.1...v1.5.2) (2022-10-21)
+
+### Documentation
+
+- SAS support documentation updates (#52) ([43ca0ff](https://github.com/Seagate/seagate-exos-x-csi/commit/43ca0fff64acd662776a970d8176994beffb990a)), closes [#52](https://github.com/Seagate/seagate-exos-x-csi/issues/52)
+
 ## [1.5.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.0...v1.5.1) (2022-10-18)
 
 ### Bug Fixes
