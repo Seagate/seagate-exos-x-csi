@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // Node is the implementation of csi.NodeServer
@@ -33,7 +33,7 @@ type Node struct {
 
 // New is a convenience function for creating a node driver
 func New() *Node {
-	if klog.V(8) {
+	if klog.V(8).Enabled() {
 		iscsi.EnableDebugLogging(os.Stderr)
 	}
 

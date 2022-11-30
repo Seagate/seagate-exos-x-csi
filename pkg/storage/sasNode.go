@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
@@ -63,7 +63,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
-	lun, _ := req.GetPublishContext()["lun"]
+	lun := req.GetPublishContext()["lun"]
 
 	// Ensure that NodePublishVolume is only called once per volume
 	AddGatekeeper(volumeName)

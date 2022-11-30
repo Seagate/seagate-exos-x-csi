@@ -16,7 +16,7 @@ require (
 	github.com/prometheus/client_golang v1.13.0
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	google.golang.org/grpc v1.50.0
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.70.0
 )
 
 require (
@@ -37,7 +37,7 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/klog/v2 v2.70.0 // indirect
+	k8s.io/klog v1.0.0 // indirect
 )
 
 // replace github.com/Seagate/seagate-exos-x-api-go => ../seagate-exos-x-api-go
