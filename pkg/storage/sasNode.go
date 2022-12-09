@@ -34,6 +34,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var globalRemovedDevicesMap = map[string]string{}
+var globalRemovedDevicesArray = []string{}
+
 // NodeStageVolume mounts the volume to a staging path on the node. This is
 // called by the CO before NodePublishVolume and is used to temporary mount the
 // volume to a staging path. Once mounted, NodePublishVolume will make sure to
@@ -79,6 +82,8 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 	klog.Infof("attached device at %s", path)
+
+	checkPreviouslyRemovedDevices(ctx)
 
 	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
 	err = EnsureFsType(fsType, path)
@@ -215,6 +220,23 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
 	}
 
+	if !connector.Multipath {
+		// If we didn't discover the multipath device initially, double check that we didn't just miss it
+		// If we do find a multipath
+		klog.Info("Device saved as non-multipath. Searching for additional devices before Detach")
+		if connector.IoHandler == nil {
+			connector.IoHandler = &saslib.OSioHandler{}
+		}
+		discoveredMpathName, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, connector.IoHandler)
+		if (discoveredMpathName != connector.OSPathName) && (len(devices) > 0) {
+			klog.V(3).Infof("Found additional linked devices: %s, %v", discoveredMpathName, devices)
+			klog.V(3).Infof("Replacing original connector info prior to Detach, device: %s=>%s, linked device paths: %v=>%v", connector.OSPathName, discoveredMpathName, connector.OSDevicePaths, devices)
+			connector.OSPathName = discoveredMpathName
+			connector.OSDevicePaths = devices
+			connector.Multipath = true
+		}
+	}
+
 	klog.Info("DisconnectVolume, detaching SAS device")
 	err = saslib.Detach(ctx, connector.OSPathName, connector.IoHandler)
 
@@ -224,9 +246,25 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 
 	klog.Infof("deleting SAS connection info file %s", sas.connectorInfoPath)
 	os.Remove(sas.connectorInfoPath)
-
+	//globalRemovedDevicesArray = append(globalRemovedDevicesArray, connector.OSPathName)
+	globalRemovedDevicesMap[connector.VolumeWWN] = connector.OSPathName
 	klog.Info("successfully detached SAS device")
 	return &csi.NodeUnpublishVolumeResponse{}, nil
+}
+
+func checkPreviouslyRemovedDevices(ctx context.Context) error {
+	klog.Info("Checking previously removed devices")
+	//for _, devpath := range globalRemovedDevicesArray {
+	for wwn, devpath := range globalRemovedDevicesMap {
+		klog.Infof("Checking for rediscovery of wwn:%s -- original device path: %s", wwn, devpath)
+
+		dm, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, &saslib.OSioHandler{})
+		if dm != "" {
+			klog.Infof("Rediscovery found for wwn:%s -- mpath device: %s, devices: %v", wwn, dm, devices)
+			saslib.Detach(ctx, dm, &saslib.OSioHandler{})
+		}
+	}
+	return nil
 }
 
 // NodeGetVolumeStats return info about a given volume
