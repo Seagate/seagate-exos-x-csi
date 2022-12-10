@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	saslib "github.com/Seagate/csi-lib-sas/sas"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -34,8 +35,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var globalRemovedDevicesMap = map[string]string{}
-var globalRemovedDevicesArray = []string{}
+var globalRemovedDevicesMap = map[string]time.Time{}
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
 // called by the CO before NodePublishVolume and is used to temporary mount the
@@ -83,6 +83,9 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	}
 	klog.Infof("attached device at %s", path)
 
+	// if current wwn has been published before, remove it from our list of previously unpublished wwns
+	delete(globalRemovedDevicesMap, wwn)
+	// check if previously unpublished devices were rediscovered by the scsi subsystem during Attach
 	checkPreviouslyRemovedDevices(ctx)
 
 	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
@@ -222,7 +225,7 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 
 	if !connector.Multipath {
 		// If we didn't discover the multipath device initially, double check that we didn't just miss it
-		// If we do find a multipath
+		// Detach the discovered devices if they are found
 		klog.Info("Device saved as non-multipath. Searching for additional devices before Detach")
 		if connector.IoHandler == nil {
 			connector.IoHandler = &saslib.OSioHandler{}
@@ -246,17 +249,17 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 
 	klog.Infof("deleting SAS connection info file %s", sas.connectorInfoPath)
 	os.Remove(sas.connectorInfoPath)
-	//globalRemovedDevicesArray = append(globalRemovedDevicesArray, connector.OSPathName)
-	globalRemovedDevicesMap[connector.VolumeWWN] = connector.OSPathName
+
+	globalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
+
 	klog.Info("successfully detached SAS device")
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 func checkPreviouslyRemovedDevices(ctx context.Context) error {
 	klog.Info("Checking previously removed devices")
-	//for _, devpath := range globalRemovedDevicesArray {
-	for wwn, devpath := range globalRemovedDevicesMap {
-		klog.Infof("Checking for rediscovery of wwn:%s -- original device path: %s", wwn, devpath)
+	for wwn, _ := range globalRemovedDevicesMap {
+		klog.Infof("Checking for rediscovery of wwn:%s", wwn)
 
 		dm, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, &saslib.OSioHandler{})
 		if dm != "" {
