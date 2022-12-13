@@ -1,3 +1,13 @@
+## [1.5.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.2...v1.5.3) (2022-12-13)
+
+### Chores
+
+- update yaml values to correct version ([2041f81](https://github.com/Seagate/seagate-exos-x-csi/commit/2041f81f4a0fb7a3647e3d767cc56e6c0fa4205c))
+
+### Other
+
+- Hs 312/sas device not found (#53) ([b0dc972](https://github.com/Seagate/seagate-exos-x-csi/commit/b0dc972e54939077d724d40ee0c31d7965528b94)), closes [#53](https://github.com/Seagate/seagate-exos-x-csi/issues/53)
+
 ## [1.5.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.1...v1.5.2) (2022-10-21)
 
 ### Documentation
