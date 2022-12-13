@@ -23,7 +23,7 @@ import (
 	"strings"
 	"unicode"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // ValidateName verifies that the string only includes spaces and printable UTF-8 characters except: " , < \

@@ -29,7 +29,7 @@ import (
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pkg/errors"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 type StorageOperations interface {
@@ -64,7 +64,7 @@ func buildCommonService(config map[string]string) (commonService, error) {
 	return commonserv, nil
 }
 
-//NewStorageNode : To return specific implementation of storage
+// NewStorageNode : To return specific implementation of storage
 func NewStorageNode(storageProtocol string, config map[string]string) (StorageOperations, error) {
 	comnserv, err := buildCommonService(config)
 	if err == nil {

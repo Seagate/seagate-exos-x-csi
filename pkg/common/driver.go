@@ -17,7 +17,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // PluginName is the public name to be used in storage class etc.
@@ -141,7 +141,7 @@ func (driver *Driver) Start(bind string) {
 
 	var ll klog.Level = 0
 	for i := 0; i < 10; i++ {
-		if klog.V(klog.Level(i)) {
+		if klog.V(klog.Level(i)).Enabled() {
 			ll = klog.Level(i)
 		} else {
 			break
