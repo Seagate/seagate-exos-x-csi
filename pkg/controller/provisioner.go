@@ -24,15 +24,22 @@ var (
 	}
 )
 
-// Extract available SAS addresses for the Node from topology segments
-func parseTopology(topology []*csi.Topology, parameters *map[string]string) error {
-	klog.Infof("Topology: %v", topology)
+// Extract available SAS addresses for Nodes from topology segments
+// This will contain all SAS initiators for all nodes unless the storage class
+// has specified allowed or preferred topologies
+func parseTopology(topologies []*csi.Topology, parameters *map[string]string) error {
+	klog.Infof("Topology: %v", topologies)
 
-	sasAddressSearchString := fmt.Sprintf("%s/%s", common.TopologyInitiatorPrefix, common.TopologySASInitiatorLabel)
-	for _, topo := range topology {
-		for key, val := range topo.GetSegments() {
+	sasAddressSearchString := common.TopologySASInitiatorLabel
+	for _, topo := range topologies {
+		segments := topo.GetSegments()
+		nodeID := segments[common.TopologyNodeIDKey]
+		for key, val := range segments {
 			if strings.Contains(key, sasAddressSearchString) {
-				(*parameters)[key] = val
+				newKey := strings.TrimPrefix(key, common.TopologyInitiatorPrefix)
+				// insert the node ID into the key so we can retrieve the node specific addresses after scheduling by the CO
+				newKey = nodeID + newKey
+				(*parameters)[newKey] = val
 			}
 		}
 	}

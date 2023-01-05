@@ -73,13 +73,12 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	}
 	parameters := req.GetVolumeContext()
 
-	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-
+	initiatorMapNodeID := common.GetTopologyCompliantNodeID(req.GetNodeId())
 	var initiatorNames []string
 	// Available SAS initiators for the node are provided here through NodeGetInfo
 	if parameters[common.StorageProtocolKey] == common.StorageProtocolSAS {
 		for key, val := range parameters {
-			if strings.Contains(key, common.TopologyInitiatorPrefix) {
+			if strings.Contains(key, common.TopologySASInitiatorLabel) && strings.Contains(key, initiatorMapNodeID) {
 				initiatorNames = append(initiatorNames, val)
 			}
 		}
@@ -87,6 +86,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 		initiatorNames = []string{req.GetNodeId()}
 	}
 
+	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	persistentInfoFilepath := driver.getConnectorInfoPath(req.GetVolumeId())
 	persistInitiatorMap(volumeName, initiatorNames, persistentInfoFilepath)
 

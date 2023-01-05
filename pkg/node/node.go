@@ -118,6 +118,8 @@ func (node *Node) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) 
 		topology[topoKey] = sasAddr
 	}
 
+	topology[common.TopologyNodeIDKey] = common.GetTopologyCompliantNodeID(initiatorName)
+
 	return &csi.NodeGetInfoResponse{
 		NodeId:            initiatorName,
 		MaxVolumesPerNode: 255,

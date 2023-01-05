@@ -137,3 +137,8 @@ func VolumeIdAugment(volumename, storageprotocol, wwn string) string {
 	klog.V(2).Infof("VolumeIdAugment: %s", volumeId)
 	return volumeId
 }
+
+// We use IQN for Node ID, but IQN can contain colons which are not allowed in the topology map
+func GetTopologyCompliantNodeID(nodeID string) string {
+	return strings.ReplaceAll(nodeID, ":", ".")
+}
