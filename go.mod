@@ -16,7 +16,7 @@ require (
 	github.com/prometheus/client_golang v1.13.0
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	google.golang.org/grpc v1.50.0
-	k8s.io/klog/v2 v2.70.0
+	k8s.io/klog/v2 v2.80.1
 )
 
 require (

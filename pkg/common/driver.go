@@ -40,6 +40,8 @@ const (
 	StorageProtocolSAS        = "sas"
 	TopologyInitiatorPrefix   = "com.seagate-exos-x-csi"
 	TopologySASInitiatorLabel = "sas-address"
+	TopologyNodeIdentifier    = "node-id"
+	TopologyNodeIDKey         = TopologyInitiatorPrefix + "/" + TopologyNodeIdentifier
 
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 32
