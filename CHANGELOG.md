@@ -1,3 +1,9 @@
+## [1.5.4](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.3...v1.5.4) (2023-01-06)
+
+### Bug Fixes
+
+- Pass node ID with the topology map for initiator selection ([2d74b5e](https://github.com/Seagate/seagate-exos-x-csi/commit/2d74b5ef328dff245c0caec764650b9247aef79b))
+
 ## [1.5.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.2...v1.5.3) (2022-12-13)
 
 ### Chores
