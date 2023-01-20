@@ -1,3 +1,9 @@
+## [1.5.5](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.4...v1.5.5) (2023-01-20)
+
+### Chores
+
+- Build OpenShift-compliant image by default. ([44180fe](https://github.com/Seagate/seagate-exos-x-csi/commit/44180fe13224d5567226d83fca2a5f0324912dfc))
+
 ## [1.5.4](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.3...v1.5.4) (2023-01-06)
 
 ### Bug Fixes
