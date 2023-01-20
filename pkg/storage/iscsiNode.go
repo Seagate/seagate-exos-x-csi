@@ -151,7 +151,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 	}
 
 	corrupted := false
-	if err = CheckFs(path, "Publish"); err != nil {
+	if err = CheckFs(path, fsType, "Publish"); err != nil {
 		corrupted = true
 	}
 
@@ -266,18 +266,8 @@ func (iscsi *iscsiStorage) NodeUnpublishVolume(ctx context.Context, req *csi.Nod
 	}
 
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
-	exists := true
 	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
 	klog.Infof("check for dm-name: ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
-	if err != nil {
-		exists = false
-	}
-
-	if err = CheckFs(connector.DevicePath, "Unpublish"); err != nil {
-		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.DevicePath, volumeName, connector.Multipath, wwn, exists, true)
-		DebugCorruption("!!", connector.DevicePath)
-		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
-	}
 
 	klog.Info("DisconnectVolume, detaching ISCSI device")
 	err = iscsilib.DisconnectVolume(*connector)

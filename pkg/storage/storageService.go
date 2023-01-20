@@ -111,10 +111,14 @@ func RemoveGatekeeper(volumeName string) {
 	gatekeepers.Unlock(volumeName)
 }
 
-// CheckFs: Perform a file system validation using fsck
-func CheckFs(path string, context string) error {
-	klog.Infof("Checking filesystem (e2fsck -n %s) [%s]", path, context)
-	if out, err := exec.Command("e2fsck", "-n", path).CombinedOutput(); err != nil {
+// CheckFs: Perform a file system validation
+func CheckFs(path string, fstype string, context string) error {
+	fsRepairCommand := "e2fsck"
+	if fstype == "xfs" {
+		fsRepairCommand = "xfs_repair"
+	}
+	klog.Infof("Checking filesystem (%s -n %s) [%s]", fsRepairCommand, path, context)
+	if out, err := exec.Command(fsRepairCommand, "-n", path).CombinedOutput(); err != nil {
 		return errors.New(string(out))
 	}
 	return nil

@@ -27,31 +27,40 @@ var (
 // Extract available SAS addresses for Nodes from topology segments
 // This will contain all SAS initiators for all nodes unless the storage class
 // has specified allowed or preferred topologies
-func parseTopology(topologies []*csi.Topology, parameters *map[string]string) error {
-	klog.Infof("Topology: %v", topologies)
+func parseTopology(topologies []*csi.Topology, storageProtocol string, parameters *map[string]string) ([]*csi.Topology, error) {
+	klog.V(5).Infof("ParseTopology: %v", topologies)
 
 	sasAddressSearchString := common.TopologySASInitiatorLabel
+	accessibleTopology := []*csi.Topology{}
+
+	hasInitiators := false
 	for _, topo := range topologies {
+
 		segments := topo.GetSegments()
+
 		nodeID := segments[common.TopologyNodeIDKey]
+		hasInitiators = false
 		for key, val := range segments {
 			if strings.Contains(key, sasAddressSearchString) {
+				hasInitiators = true
 				newKey := strings.TrimPrefix(key, common.TopologyInitiatorPrefix)
 				// insert the node ID into the key so we can retrieve the node specific addresses after scheduling by the CO
 				newKey = nodeID + newKey
 				(*parameters)[newKey] = val
 			}
 		}
+		if hasInitiators {
+			accessibleTopology = append(accessibleTopology, topo)
+		}
+
 	}
-	return nil
+	return accessibleTopology, nil
 }
 
 // CreateVolume creates a new volume from the given request. The function is idempotent.
 func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 
 	parameters := req.GetParameters()
-	//insert topology keys into the parameters map, so they will be available in ControllerPublishVolume
-	parseTopology(req.GetAccessibilityRequirements().GetRequisite(), &parameters)
 
 	volumeName, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
@@ -60,6 +69,16 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 	// Extract the storage interface protocol to be used for this volume (iscsi, fc, sas, etc)
 	storageProtocol := storage.ValidateStorageProtocol(parameters[common.StorageProtocolKey])
+
+	klog.Infof("Create Volume -- Requisite Topology: %v", req.GetAccessibilityRequirements().GetRequisite())
+	klog.Infof("Create Volume -- Preferred Topology: %v", req.GetAccessibilityRequirements().GetPreferred())
+
+	//insert topology keys into the parameters map, so they will be available in ControllerPublishVolume
+	accessibleTopology, err := parseTopology(req.GetAccessibilityRequirements().GetRequisite(), storageProtocol, &parameters)
+	if err != nil || len(accessibleTopology) == 0 {
+		return nil, status.Error(codes.Unavailable, "could not parse topology requirements")
+	}
+	klog.V(5).Infof("accessibleTopology: %v", accessibleTopology)
 
 	if !common.ValidateName(volumeName) {
 		return nil, status.Error(codes.InvalidArgument, "volume name contains invalid characters")
@@ -143,10 +162,11 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 	volume := &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId:      volumeId,
-			VolumeContext: parameters,
-			CapacityBytes: req.GetCapacityRange().GetRequiredBytes(),
-			ContentSource: req.GetVolumeContentSource(),
+			VolumeId:           volumeId,
+			VolumeContext:      parameters,
+			AccessibleTopology: accessibleTopology,
+			CapacityBytes:      req.GetCapacityRange().GetRequiredBytes(),
+			ContentSource:      req.GetVolumeContentSource(),
 		},
 	}
 
