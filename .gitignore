@@ -25,3 +25,12 @@ test/sanity-crc/secrets.yml
 test/sanity-crc/volume.yml
 test/sanity-crc/csi-sanity
 test/sanity-crc/sanity-crc.yaml
+
+# certification-related files
+.redhat_*
+preflight-*
+*.tgz
+
+# Backup files
+*~
+~.bak

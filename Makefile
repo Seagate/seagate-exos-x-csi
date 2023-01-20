@@ -1,4 +1,4 @@
-.PHONY: help all bin controller node test image limage ubi push clean
+.PHONY: help all bin controller node test image limage ubi openshift push clean
 
 ifdef DOCKER_HUB_REPOSITORY
 DOCKER_HUB_REPOSITORY := $(DOCKER_HUB_REPOSITORY)
@@ -46,7 +46,8 @@ help:
 	@echo "make ubi          - create a local docker image using Redhat UBI ($(IMAGE))"
 	@echo ""
 
-all: clean bin ubi push
+all: clean bin openshift push
+openshift-all: clean openshift push
 
 bin: controller node
 
@@ -88,8 +89,19 @@ openshift:
 		-e 's/^ARG vcs_ref=.*/ARG vcs_ref=$(strip $(shell git rev-parse HEAD))/' \
 		-e 's/^ARG build_date=.*/ARG build_date=$(strip $(shell date --utc -Iseconds))/'
 	cmp Dockerfile.redhat Dockerfile.tmp && rm Dockerfile.tmp || mv Dockerfile.tmp Dockerfile.redhat
-	docker build -f Dockerfile.redhat -t $(BIN) .
-	docker inspect $(BIN):latest
+	docker build -f Dockerfile.redhat -t $(IMAGE) .
+	docker inspect $(IMAGE)
+
+PREFLIGHT=/tmp/preflight-linux-amd64
+PREFLIGHT_REGISTRY=localhost:5000
+PREFLIGHT_IMAGE=$(PREFLIGHT_REGISTRY)/$(BIN):$(VERSION)
+
+preflight:
+	# make sure local registry is running
+	-docker run -d -p 5000:5000 --name registry registry:2
+	docker tag $(IMAGE) $(PREFLIGHT_IMAGE)
+	docker push $(PREFLIGHT_IMAGE)
+	$(PREFLIGHT) check container $(PREFLIGHT_IMAGE)
 
 push:
 	@echo ""
