@@ -120,6 +120,7 @@ func (node *Node) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) 
 
 	topology[common.TopologyNodeIDKey] = common.GetTopologyCompliantNodeID(initiatorName)
 
+	klog.Infof("Node Accessible Topology: %v", topology)
 	return &csi.NodeGetInfoResponse{
 		NodeId:            initiatorName,
 		MaxVolumesPerNode: 255,

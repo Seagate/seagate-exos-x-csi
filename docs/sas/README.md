@@ -1,3 +1,5 @@
+The CSI driver SAS support requires that all nodes have access to the SAS array. 
+
 # Specifying SAS Initiators
 
 ## SAS Initiator Discovery
@@ -17,17 +19,4 @@ Example contents of the `sas-addresses` file, **note that the '0x' prefix is omi
 ```
 500605b00b4ec831
 500605b00b4ec832
-```
-
-## Specify your initiator as a topology value in your storage class:
-Use the CSI Topology feature to ensure your PVCs are only scheduled on Nodes that are connected to your SAS array. If this field is not present in your storage class, PVCs for this storage class
-may be scheduled on Nodes that are not connected to the array and they will fail.
-
-Also see the storage class example file in this directory
-```
-allowedTopologies:
-  - matchLabelExpressions:
-    - key: com.seagate-exos-x-csi/sas-address-0
-      values:
-      - 500605b00b4ec831 # The first sas initiator on your node
 ```

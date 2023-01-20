@@ -96,7 +96,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	}
 
 	corrupted := false
-	if err = CheckFs(path, "Publish"); err != nil {
+	if err = CheckFs(path, fsType, "Publish"); err != nil {
 		corrupted = true
 	}
 
@@ -211,18 +211,8 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 	}
 
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
-	exists := true
 	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
 	klog.Infof("check for dm-name: ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
-	if err != nil {
-		exists = false
-	}
-
-	if err = CheckFs(connector.OSPathName, "Unpublish"); err != nil {
-		klog.Infof("device corruption (unpublish), device=%v, volume=%s, multipath=%v, wwn=%v, exists=%v, corrupted=%v", connector.OSPathName, volumeName, connector.Multipath, wwn, exists, true)
-		DebugCorruption("!!", connector.OSPathName)
-		return nil, status.Errorf(codes.DataLoss, "(unpublish) filesystem seems to be corrupted: %v", err)
-	}
 
 	if !connector.Multipath {
 		// If we didn't discover the multipath device initially, double check that we didn't just miss it
