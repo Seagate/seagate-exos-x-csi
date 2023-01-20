@@ -1,3 +1,13 @@
+## [1.5.6](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.5...v1.5.6) (2023-01-20)
+
+### Bug Fixes
+
+- Fix XFS compatibility and return accessible topology ([3a43444](https://github.com/Seagate/seagate-exos-x-csi/commit/3a434441b007c0d5350affcb70d06968dc8df534))
+
+### Other
+
+- Merge pull request #59 from David-T-White/xfs-fscheck-fix ([1a0a321](https://github.com/Seagate/seagate-exos-x-csi/commit/1a0a321ca761b045e97d50b97c97acf5a1d7f1ff)), closes [#59](https://github.com/Seagate/seagate-exos-x-csi/issues/59)
+
 ## [1.5.5](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.4...v1.5.5) (2023-01-20)
 
 ### Chores
