@@ -54,6 +54,9 @@ func parseTopology(topologies []*csi.Topology, storageProtocol string, parameter
 		}
 
 	}
+	if len(accessibleTopology) == 0 {
+		accessibleTopology = nil
+	}
 	return accessibleTopology, nil
 }
 
@@ -75,8 +78,9 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 	//insert topology keys into the parameters map, so they will be available in ControllerPublishVolume
 	accessibleTopology, err := parseTopology(req.GetAccessibilityRequirements().GetRequisite(), storageProtocol, &parameters)
-	if err != nil || len(accessibleTopology) == 0 {
-		return nil, status.Error(codes.Unavailable, "could not parse topology requirements")
+	if err != nil {
+		klog.Errorf("parseTopology() returned error: %v", err)
+		return nil, err
 	}
 	klog.V(5).Infof("accessibleTopology: %v", accessibleTopology)
 
