@@ -78,11 +78,14 @@ func New() *Node {
 
 	node.InitServer(
 		func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+			klog.Infof(">>> %s", info.FullMethod)
 			if info.FullMethod == "/csi.v1.Node/NodePublishVolume" {
-				if !node.semaphore.TryAcquire(1) {
-					return nil, status.Error(codes.Aborted, "node busy: too many concurrent volume publication, try again later")
+				if err := node.semaphore.Acquire(ctx, 1); err != nil {
+					klog.Infof(">>> %s FAILED to acquire semaphore", info.FullMethod)
+					return nil, status.Error(codes.Aborted, "node busy: too many concurrent volume publications, try again later")
 				}
 				defer node.semaphore.Release(1)
+				klog.Infof(">>> %s acquired semaphore", info.FullMethod)
 			}
 			return handler(ctx, req)
 		},
