@@ -9,7 +9,7 @@ endif
 ifdef VERSION
 VERSION := $(VERSION)
 else
-VERSION := v1.5.3
+VERSION := v1.5.7
 endif
 
 VERSION_FLAG = -X github.com/Seagate/seagate-exos-x-csi/pkg/common.Version=$(VERSION)
@@ -18,13 +18,15 @@ ifndef BIN
 	BIN = seagate-exos-x-csi
 endif
 
-HELM_VERSION := 1.0.0
+HELM_VERSION := 1.0.1
 HELM_KEY := css-host-software
+HELM_IMAGE_REPO := $(DOCKER_HUB_REPOSITORY)/$(BIN)
 # $HELM_KEY should be the name of a secret key in the invoker's default keyring
 ifneq (,$(HELM_KEY))
-  HELM_KEYRING := --keyring ~/.gnupg/secring.gpg
-  HELM_SIGN := --sign --key $(HELM_KEY) $(HELM_KEYRING)
+  HELM_KEYRING := ~/.gnupg/secring.gpg
+  HELM_SIGN := --sign --key $(HELM_KEY) --keyring $(HELM_KEYRING)
 endif 
+HELM_PACKAGE := $(BIN)-$(HELM_VERSION).tgz
 
 IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
 
@@ -92,16 +94,25 @@ openshift:
 	docker build -f Dockerfile.redhat -t $(IMAGE) .
 	docker inspect $(IMAGE)
 
-PREFLIGHT=/tmp/preflight-linux-amd64
+PREFLIGHT=../openshift-preflight/preflight
 PREFLIGHT_REGISTRY=localhost:5000
 PREFLIGHT_IMAGE=$(PREFLIGHT_REGISTRY)/$(BIN):$(VERSION)
+# PREFLIGHT_OPTIONS would typically include "--certification-project-id=xxx --pyxis-api-token=xxx"
+PREFLIGHT_OPTIONS:=$(strip $(shell test ! -f .preflight_options || cat .preflight_options))
+PREFLIGHT_SUBMIT=
 
 preflight:
-	# make sure local registry is running
-	-docker run -d -p 5000:5000 --name registry registry:2
+	-docker run -d -p 5000:5000 --name registry registry:2 # make sure local registry is running
 	docker tag $(IMAGE) $(PREFLIGHT_IMAGE)
 	docker push $(PREFLIGHT_IMAGE)
-	$(PREFLIGHT) check container $(PREFLIGHT_IMAGE)
+	$(PREFLIGHT) check container $(PREFLIGHT_SUBMIT) $(PREFLIGHT_OPTIONS) $(PREFLIGHT_IMAGE)
+
+preflight-submit: .preflight_options
+	$(MAKE) preflight PREFLIGHT_SUBMIT=--submit
+
+build-preflight:
+	(cd ..; git clone https://github.com/redhat-openshift-ecosystem/openshift-preflight.git)
+	cd ../openshift-preflight && make build
 
 push:
 	@echo ""
@@ -116,16 +127,17 @@ clean:
 
 # Create a helm package that can be installed from a remote HTTPS URL with, e.g.
 # helm install seagate-csi https://<server>/<path>/seagate-exos-x-csi-1.0.0.tgz
-HELM_PACKAGE := $(BIN)-$(HELM_VERSION).tgz
 helm-package: $(HELM_PACKAGE)
 
 # To create a package without signing it, specify "make helm-package HELM_KEY="
-# Note that helm doesn't support GPG v2.1 kbx files.  If signing fails, try:
+# Note that helm doesn't support GPG v2.1 kbx files; if signing fails, try:
 # gpg --export-secret-keys > ~/.gnupg/secring.gpg
 $(HELM_PACKAGE):
-	cd helm; helm package $(HELM_SIGN) $$PWD/csi-charts
+	cd helm; helm package $(HELM_SIGN) \
+		--set image.tag=$(VERSION) --set image.repository=$(HELM_IMAGE_REPO) \
+		$$PWD/csi-charts
 	cp -p helm/$@* .
 ifdef HELM_KEYRING
-	helm verify $(HELM_KEYRING) $@
+	helm verify --keyring $(HELM_KEYRING) $@
 	zip -r $(subst .tgz,-signed-helm-package.zip,$@) $@ $@.prov
 endif

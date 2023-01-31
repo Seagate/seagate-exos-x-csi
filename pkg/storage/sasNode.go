@@ -249,7 +249,7 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 
 func checkPreviouslyRemovedDevices(ctx context.Context) error {
 	klog.Info("Checking previously removed devices")
-	for wwn, _ := range globalRemovedDevicesMap {
+	for wwn := range globalRemovedDevicesMap {
 		klog.Infof("Checking for rediscovery of wwn:%s", wwn)
 
 		dm, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, &saslib.OSioHandler{})

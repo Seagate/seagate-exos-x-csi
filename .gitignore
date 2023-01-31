@@ -28,9 +28,11 @@ test/sanity-crc/sanity-crc.yaml
 
 # certification-related files
 .redhat_*
-preflight-*
+.preflight*
+preflight*
 *.tgz
 
 # Backup files
 *~
 ~.bak
+artifacts*
