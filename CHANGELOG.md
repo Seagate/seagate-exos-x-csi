@@ -1,3 +1,16 @@
+## [1.5.7](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.6...v1.5.7) (2023-01-31)
+
+### Bug Fixes
+
+- squash a warning ([9453abb](https://github.com/Seagate/seagate-exos-x-csi/commit/9453abb114dc3299aa8813581ad54e14d31cf823))
+- wait for semaphore in NodePublishVolume instead of requiring the CO to retry until the semaphore is free ([334cd0a](https://github.com/Seagate/seagate-exos-x-csi/commit/334cd0a7e66f428f01a9050ba27341e2fea1b53b))
+
+### Other
+
+- Merge pull request #60 from Seagate/bug#56 ([204b559](https://github.com/Seagate/seagate-exos-x-csi/commit/204b559bdaf864b741a3f7e7c71da4412881cace)), closes [#60](https://github.com/Seagate/seagate-exos-x-csi/issues/60) [Seagate/bug#56](https://github.com/Seagate/bug/issues/56) [Bug#56](https://github.com/Bug/issues/56)
+- minor changes to improve the preflight and helm-package targets ([ed52e2a](https://github.com/Seagate/seagate-exos-x-csi/commit/ed52e2af848e790f478d7fd0a69c7c0bcdb45cc8))
+- fix "could not parse topology requirements" error for iSCSI targets (#56, HS-332) ([13c749f](https://github.com/Seagate/seagate-exos-x-csi/commit/13c749feae805d8881f97ce088b229944b5ff00b)), closes [#56](https://github.com/Seagate/seagate-exos-x-csi/issues/56)
+
 ## [1.5.6](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.5...v1.5.6) (2023-01-20)
 
 ### Bug Fixes
