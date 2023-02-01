@@ -80,6 +80,7 @@ func TranslateName(name, prefix string) (string, error) {
 
 		// Verify that the prefix is the required length, and truncate as needed, add an underscore
 		if len(prefix) > VolumePrefixMaxLength {
+			klog.Warningf("StorageClass volPrefix will be truncated from %q to %q", prefix, prefix[:VolumePrefixMaxLength])
 			prefix = prefix[:VolumePrefixMaxLength]
 		}
 		prefix = prefix + "_"
