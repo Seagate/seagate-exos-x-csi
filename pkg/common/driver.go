@@ -44,7 +44,7 @@ const (
 	TopologyNodeIDKey         = TopologyInitiatorPrefix + "/" + TopologyNodeIdentifier
 
 	MaximumLUN            = 255
-	VolumeNameMaxLength   = 32
+	VolumeNameMaxLength   = 31
 	VolumePrefixMaxLength = 3
 )
 
