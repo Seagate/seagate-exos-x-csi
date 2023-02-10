@@ -1,16 +1,29 @@
 # Seagate CSI dynamic provisioner for Kubernetes
 
-Seagate Exos X CSI driver supports Seagate storage systems with 4xx5/5xx5 controllers (including OEM versions)
+The Seagate Exos X CSI Driver supports the following storage arrays
+
+- Seagate Exos X and AssuredSAN (4006/5005/4005/3005)
+- Dell PowerVault ME4 and ME5 Series
+
+iSCSI and SAS host interfaces are supported, and support for Fibre
+Channel is in progress.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seagate/seagate-exos-x-csi)](https://goreportcard.com/report/github.com/Seagate/seagate-exos-x-csi)
 
 ## Introduction
 
-Seagate Exos X CSI Driver helps users of storage systems with 4xx5/5xx5 controllers from Seagate and OEM vendors efficiently manage their storage within container platforms that support the CSI standard.
-Dealing with persistent storage on Kubernetes can be particularly cumbersome, especially when dealing with on-premises installations, or when the cloud-provider persistent storage solutions are not applicable.
-The Seagate CSI Driver is a direct result of customer demand to bring the ease of use of Seagate Exos X to DevOps practices, and demonstrates Seagate’s continued commitment to the Kubernetes ecosystem
+The Seagate Exos X CSI Driver helps storage admins efficiently manage
+their storage within container platforms that support the CSI
+standard.  Dealing with persistent storage on Kubernetes can be
+particularly cumbersome, especially when dealing with on-premises
+installations, or when the cloud-provider persistent storage solutions
+are not applicable.  The Seagate CSI Driver is a direct result of
+customer demand to bring the ease of use of Seagate Exos X to DevOps
+practices, and demonstrates Seagate’s continued commitment to the
+Kubernetes ecosystem
 
-More information about Seagate Data Storage Systems can be found [online](https://www.seagate.com/products/storage/data-storage-systems/)
+More information about Seagate Data Storage Systems can be found
+[online](https://www.seagate.com/products/storage/data-storage-systems/)
 
 ## This project
 
@@ -27,21 +40,27 @@ This CSI driver is an open-source project under the Apache 2.0 [license](./LICEN
 
 ## Installation
 
-### Install ISCSI tools and Multipath driver on your node(s)
+### Install iSCSI tools and multipath driver on your nodes
 
-`iscsid` and `multipathd` must be installed on every node. Check the installation method appropriate for your Linux distribution.
-#### Ubuntu installation procedure
-- Remove any containers that were running a prior CSI Driver version.
+`iscsid` and `multipathd` must be installed on every node. Check the
+installation method appropriate for your Linux distribution.  The
+example below shows steps for Ubuntu Server.
+
+#### Ubuntu Installation procedure
+- Remove any containers that were running an earlier version of the Seagate Exos X CSI Driver.
 - Install required packages:
+
 ```
     sudo apt update && sudo apt install open-iscsi scsitools multipath-tools -y
 ```
 - Determine if any packages are required for your filesystem (ext3/ext4/xfs) choice and view current support:
+
 ```
 cat /proc/filesystems
 ```
 - Update /etc/multipath.conf. Check docs/iscsi/multipath.conf as a reference
-- Restart MultipathD
+- Restart `multipathd`:
+
 ```
     service multipath-tools restart
 ```
@@ -67,7 +86,6 @@ The preferred installation approach is to use the provided `Helm Charts` under t
 - Update `example/secret-example1.yaml` with your storage controller credentials.
 - Update `example/storageclass-example1.yaml` with your storage controller values.
 - Update `example/testpod-example1.yaml` with any of you new values.
-
 
 ## Documentation
 
