@@ -113,6 +113,12 @@ func RemoveGatekeeper(volumeName string) {
 
 // CheckFs: Perform a file system validation
 func CheckFs(path string, fstype string, context string) error {
+
+	if IsVolumeInUse(path) {
+		klog.Infof("Volume already mounted, not performing FS check")
+		return nil
+	}
+
 	fsRepairCommand := "e2fsck"
 	if fstype == "xfs" {
 		fsRepairCommand = "xfs_repair"
