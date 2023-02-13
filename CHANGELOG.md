@@ -1,3 +1,21 @@
+## [1.5.8](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.7...v1.5.8) (2023-02-13)
+
+### Bug Fixes
+
+- Do not run filesystem checks if fs is already mounted ([70a5b71](https://github.com/Seagate/seagate-exos-x-csi/commit/70a5b71c4ab62a73414ab8fe8dc5abb252622203))
+- Reduce maximum volume length to avoid copy volume truncation issue ([d769c22](https://github.com/Seagate/seagate-exos-x-csi/commit/d769c22dafd768ad22b79e3d7033046fb8e332e1))
+
+### Chores
+
+- **deps:** bump http-cache-semantics from 4.1.0 to 4.1.1 ([57445a2](https://github.com/Seagate/seagate-exos-x-csi/commit/57445a275abd245d7ccd73aadee7250d086a87bc))
+
+### Other
+
+- Update values.yaml ([220362b](https://github.com/Seagate/seagate-exos-x-csi/commit/220362b725dadf38432c0e35b8b01e3ec2675428))
+- Update README.md to include more supported devices, and fix typos in docs/iscsi/multipath.conf ([6c2caa6](https://github.com/Seagate/seagate-exos-x-csi/commit/6c2caa6d93d8916e33f68eaff68589c83c402b73))
+- Add a warning when volPrefix StorageClass param is too long and will be truncated ([2750fde](https://github.com/Seagate/seagate-exos-x-csi/commit/2750fdec13eb2aae8098cd20fb03d83132389260))
+- switch to manual trigger ([73dde0d](https://github.com/Seagate/seagate-exos-x-csi/commit/73dde0dd0a7b20828b13c39eb5f924784767fe50))
+
 ## [1.5.7](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.6...v1.5.7) (2023-01-31)
 
 ### Bug Fixes
