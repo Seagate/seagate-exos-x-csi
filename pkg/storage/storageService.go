@@ -32,6 +32,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	SASAddressFilePath = "/etc/kubernetes/sas-addresses"
+	FCAddressFilePath  = "/etc/kubernetes/fc-addresses"
+)
+
 type StorageOperations interface {
 	csi.NodeServer
 }
@@ -55,6 +60,9 @@ type sasStorage struct {
 	cs                commonService
 	connectorInfoPath string
 }
+
+// Map of device WWNs to timestamp of when they were unpublished from the node
+var globalRemovedDevicesMap = map[string]time.Time{}
 
 // buildCommonService:
 func buildCommonService(config map[string]string) (commonService, error) {

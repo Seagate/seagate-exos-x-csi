@@ -75,10 +75,17 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 
 	initiatorMapNodeID := common.GetTopologyCompliantNodeID(req.GetNodeId())
 	var initiatorNames []string
-	// Available SAS initiators for the node are provided here through NodeGetInfo
+
+	// Available initiators for the node are provided in parameters through NodeGetInfo
 	if parameters[common.StorageProtocolKey] == common.StorageProtocolSAS {
 		for key, val := range parameters {
 			if strings.Contains(key, common.TopologySASInitiatorLabel) && strings.Contains(key, initiatorMapNodeID) {
+				initiatorNames = append(initiatorNames, val)
+			}
+		}
+	} else if parameters[common.StorageProtocolKey] == common.StorageProtocolFC {
+		for key, val := range parameters {
+			if strings.Contains(key, common.TopologyFCInitiatorLabel) && strings.Contains(key, initiatorMapNodeID) {
 				initiatorNames = append(initiatorNames, val)
 			}
 		}

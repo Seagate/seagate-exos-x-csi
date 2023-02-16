@@ -19,10 +19,13 @@
 package storage
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,9 +37,6 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 )
-
-// Map of device WWNs to timestamp of when they were unpublished from the node
-var globalRemovedDevicesMap = map[string]time.Time{}
 
 // NodeStageVolume mounts the volume to a staging path on the node. This is
 // called by the CO before NodePublishVolume and is used to temporary mount the
@@ -51,6 +51,73 @@ func (sas *sasStorage) NodeStageVolume(ctx context.Context, req *csi.NodeStageVo
 // Will not be called as the plugin does not have the STAGE_UNSTAGE_VOLUME capability
 func (sas *sasStorage) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "NodeUnstageVolume is not implemented")
+}
+
+// Read the sas address configuration file and return addresses
+func readSASAddrFile(filename string) ([]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	foundAddresses := []string{}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		foundAddresses = append(foundAddresses, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return foundAddresses, nil
+}
+
+func GetSASInitiators() ([]string, error) {
+	// look for file specifying addresses. Skip discovery process if it exists
+	specifiedSASAddrs, err := readSASAddrFile(SASAddressFilePath)
+	if err != nil {
+		klog.ErrorS(err, "Error reading sas address config file", "path", SASAddressFilePath)
+	}
+	if specifiedSASAddrs != nil {
+		return specifiedSASAddrs, nil
+	}
+	klog.InfoS("begin SAS address discovery")
+	sasAddrFilename := "host_sas_address"
+	scsiHostBasePath := "/sys/class/scsi_host/"
+
+	dirList, err := os.ReadDir(scsiHostBasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hostDir := range dirList {
+		sasAddrFile := filepath.Join(scsiHostBasePath, hostDir.Name(), sasAddrFilename)
+		addrBytes, err := os.ReadFile(sasAddrFile)
+		address := string(addrBytes)
+		address = strings.TrimLeft(strings.TrimRight(address, "\n"), "0x")
+
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			} else {
+				klog.ErrorS(err, "error searching for SAS HBA addresses", "path", sasAddrFile)
+				return nil, err
+			}
+		} else {
+			klog.InfoS("found SAS HBA address", "address", address)
+			if firstAddress, err := strconv.ParseInt(address, 16, 0); err != nil {
+				return nil, err
+			} else {
+				secondAddress := strconv.FormatInt(firstAddress+1, 16)
+				specifiedSASAddrs = append(specifiedSASAddrs, address, secondAddress)
+			}
+		}
+	}
+	return specifiedSASAddrs, nil
 }
 
 // NodePublishVolume mounts the volume mounted to the staging path to the target path

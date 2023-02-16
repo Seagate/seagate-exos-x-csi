@@ -28,11 +28,9 @@ var (
 // This will contain all SAS initiators for all nodes unless the storage class
 // has specified allowed or preferred topologies
 func parseTopology(topologies []*csi.Topology, storageProtocol string, parameters *map[string]string) ([]*csi.Topology, error) {
-	klog.V(5).Infof("ParseTopology: %v", topologies)
+	klog.V(5).Infof("parseTopology: %v", topologies)
 
-	sasAddressSearchString := common.TopologySASInitiatorLabel
 	accessibleTopology := []*csi.Topology{}
-
 	hasInitiators := false
 	for _, topo := range topologies {
 
@@ -41,7 +39,7 @@ func parseTopology(topologies []*csi.Topology, storageProtocol string, parameter
 		nodeID := segments[common.TopologyNodeIDKey]
 		hasInitiators = false
 		for key, val := range segments {
-			if strings.Contains(key, sasAddressSearchString) {
+			if strings.Contains(key, common.TopologySASInitiatorLabel) || strings.Contains(key, common.TopologyFCInitiatorLabel) {
 				hasInitiators = true
 				newKey := strings.TrimPrefix(key, common.TopologyInitiatorPrefix)
 				// insert the node ID into the key so we can retrieve the node specific addresses after scheduling by the CO

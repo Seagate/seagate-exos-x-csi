@@ -5,8 +5,7 @@ The Seagate Exos X CSI Driver supports the following storage arrays
 - Seagate Exos X and AssuredSAN (4006/5005/4005/3005)
 - Dell PowerVault ME4 and ME5 Series
 
-iSCSI and SAS host interfaces are supported, and support for Fibre
-Channel is in progress.
+iSCSI, SAS, and FC host interfaces are supported.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seagate/seagate-exos-x-csi)](https://goreportcard.com/report/github.com/Seagate/seagate-exos-x-csi)
 
@@ -50,20 +49,25 @@ example below shows steps for Ubuntu Server.
 - Remove any containers that were running an earlier version of the Seagate Exos X CSI Driver.
 - Install required packages:
 
-```
-    sudo apt update && sudo apt install open-iscsi scsitools multipath-tools -y
-```
+    ```
+        sudo apt update && sudo apt install open-iscsi scsitools multipath-tools -y
+    ```
 - Determine if any packages are required for your filesystem (ext3/ext4/xfs) choice and view current support:
 
-```
-cat /proc/filesystems
-```
-- Update /etc/multipath.conf. Check docs/iscsi/multipath.conf as a reference
+    ```
+    cat /proc/filesystems
+    ```
+- Update /etc/multipath.conf. Check docs/iscsi/multipath.conf as a reference. In particular ensure your configuration includes these settings:
+    ```
+    find_multipaths "greedy"
+    user_friendly_names		"no"
+    ```
+
 - Restart `multipathd`:
 
-```
-    service multipath-tools restart
-```
+    ```
+        service multipath-tools restart
+    ```
 
 ### Deploy the provisioner to your kubernetes cluster
 
