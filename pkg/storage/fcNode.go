@@ -19,10 +19,12 @@
 package storage
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	fclib "github.com/Seagate/csi-lib-sas/sas"
@@ -79,6 +81,11 @@ func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 	klog.Infof("attached device at %s", path)
+
+	// if current wwn has been published before, remove it from our list of previously unpublished wwns
+	delete(globalRemovedDevicesMap, wwn)
+	// check if previously unpublished devices were rediscovered by the scsi subsystem during Attach
+	checkPreviouslyRemovedDevices(ctx)
 
 	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
 	err = EnsureFsType(fsType, path)
@@ -275,4 +282,68 @@ func (fc *fcStorage) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCa
 // NodeGetInfo returns info about the node
 func (fc *fcStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "NodeGetInfo is not implemented")
+}
+
+// Retrieve FC initiators for use by controller code for publishing volumes
+func GetFCInitiators() ([]string, error) {
+	specifiedFCAddrs, err := readFCAddrFile(FCAddressFilePath)
+	if err != nil {
+		klog.ErrorS(err, "Error reading fc address config file: %v", err)
+	}
+	if specifiedFCAddrs != nil {
+		return specifiedFCAddrs, nil
+	}
+
+	klog.InfoS("begin FC address discovery")
+	fcAddrFilename := "port_name"
+	scsiHostBasePath := "/sys/class/fc_host/"
+
+	dirList, err := os.ReadDir(scsiHostBasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	discoveredFCAddresses := []string{}
+	for _, hostDir := range dirList {
+		fcAddrFile := filepath.Join(scsiHostBasePath, hostDir.Name(), fcAddrFilename)
+		addrBytes, err := os.ReadFile(fcAddrFile)
+		address := string(addrBytes)
+		address = strings.TrimLeft(strings.TrimRight(address, "\n"), "0x")
+
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			} else {
+				klog.ErrorS(err, "error searching for FC HBA addresses", "path", fcAddrFile)
+				return nil, err
+			}
+		} else {
+			klog.InfoS("found FC initiator address", "address", address)
+			discoveredFCAddresses = append(discoveredFCAddresses, address)
+		}
+	}
+	return discoveredFCAddresses, nil
+}
+
+// Read the fc address configuration file and return addresses
+func readFCAddrFile(filename string) ([]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	foundAddresses := []string{}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		foundAddresses = append(foundAddresses, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return foundAddresses, nil
 }

@@ -40,6 +40,7 @@ const (
 	StorageProtocolSAS        = "sas"
 	TopologyInitiatorPrefix   = "com.seagate-exos-x-csi"
 	TopologySASInitiatorLabel = "sas-address"
+	TopologyFCInitiatorLabel  = "fc-address"
 	TopologyNodeIdentifier    = "node-id"
 	TopologyNodeIDKey         = TopologyInitiatorPrefix + "/" + TopologyNodeIdentifier
 
