@@ -15,8 +15,3 @@ parameters:
   pool: A # Pool for volumes provisioning
   volPrefix: stx # Desired prefix for volume naming, an underscore is appended
   storageProtocol: sas # The storage interface (iscsi, fc, sas) being used for storage i/o
-allowedTopologies:
-  - matchLabelExpressions:
-    - key: com.seagate-exos-x-csi/sas-address-0
-      values:
-      - 500605b00b4ec831 # The first sas initiator on your node
