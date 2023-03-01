@@ -1,3 +1,19 @@
+## [1.5.9](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.8...v1.5.9) (2023-03-01)
+
+### Bug Fixes
+
+- Fix passing of FC initiators from node to controller ([9f9b6b9](https://github.com/Seagate/seagate-exos-x-csi/commit/9f9b6b93f93ecf07b8564edc93fefe0d36b5e7b3))
+
+### Chores
+
+- **deps:** bump golang.org/x/net ([f9107db](https://github.com/Seagate/seagate-exos-x-csi/commit/f9107db9795b74bf6cf8613d3db2a248ec75d183))
+- **deps:** bump golang.org/x/text from 0.3.7 to 0.3.8 ([b85429b](https://github.com/Seagate/seagate-exos-x-csi/commit/b85429b2f2a33db39b47e55202cf5453bd1b6918))
+
+### Documentation
+
+- Remove defunct topology specification example ([a6e710c](https://github.com/Seagate/seagate-exos-x-csi/commit/a6e710c52dc9c927f65be886fe947f3bd386f47c))
+- update multipath option to greedy ([e36a932](https://github.com/Seagate/seagate-exos-x-csi/commit/e36a932fe5387d96e032d1540ff83b65e313bb35))
+
 ## [1.5.8](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.7...v1.5.8) (2023-02-13)
 
 ### Bug Fixes
