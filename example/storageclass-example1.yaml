@@ -15,5 +15,5 @@ parameters:
   csi.storage.k8s.io/controller-expand-secret-namespace: default
   fsType: ext4 # Desired filesystem
   pool: A # Pool to use on the IQN to provision volumes
-  volPrefix: csi # Desired prefix for volume naming, an underscore is appended
+  volPrefix: csi # Desired prefix for volume naming. 3 chars max; an underscore will be appended.
   storageProtocol: iscsi # The storage interface (iscsi, fc, sas) being used for storage i/o
