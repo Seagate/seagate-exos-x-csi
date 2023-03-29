@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	fclib "github.com/Seagate/csi-lib-sas/sas"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -213,6 +214,24 @@ func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
 	klog.Infof("check for dm-name: ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
 
+	if !connector.Multipath {
+		// If we didn't discover the multipath device initially, double check that we didn't just miss it
+		// Detach the discovered devices if they are found
+		klog.V(3).InfoS("Device saved as non-multipath. Searching for additional devices before Detach")
+		if connector.IoHandler == nil {
+			connector.IoHandler = &fclib.OSioHandler{}
+		}
+		discoveredMpathName, devices := fclib.FindDiskById(klog.FromContext(ctx), wwn, connector.IoHandler)
+		if (discoveredMpathName != connector.OSPathName) && (len(devices) > 0) {
+			klog.V(0).InfoS("Found additional linked devices", "path", discoveredMpathName, "devices", devices)
+			klog.V(0).InfoS("Replacing original connector info prior to Detach", "originalMultipathDevice", connector.OSPathName,
+				"discoveredMultipathDevice", discoveredMpathName, "originalLinkedDevices", connector.OSDevicePaths, "discoveredLinkedDevices", devices)
+			connector.OSPathName = discoveredMpathName
+			connector.OSDevicePaths = devices
+			connector.Multipath = true
+		}
+	}
+
 	klog.Info("DisconnectVolume, detaching device")
 	err = fclib.Detach(ctx, connector.OSPathName, connector.IoHandler)
 
@@ -222,6 +241,8 @@ func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 
 	klog.Infof("deleting FC connection info file %s", fc.connectorInfoPath)
 	os.Remove(fc.connectorInfoPath)
+
+	globalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
 
 	klog.Info("successfully detached FC device")
 	return &csi.NodeUnpublishVolumeResponse{}, nil
