@@ -87,7 +87,7 @@ func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 	// check if previously unpublished devices were rediscovered by the scsi subsystem during Attach
 	checkPreviouslyRemovedDevices(ctx)
 
-	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
+	fsType := GetFsType(req)
 	err = EnsureFsType(fsType, path)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

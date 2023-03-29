@@ -275,9 +275,6 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 		return nil
 	}
 
-	if err := checkIfKeyExistsInConfig(common.FsTypeConfigKey); err != nil {
-		return err
-	}
 	if err := checkIfKeyExistsInConfig(common.PoolConfigKey); err != nil {
 		return err
 	}
@@ -289,6 +286,13 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 		for _, capability := range *capabilities {
 			if capability.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER {
 				return status.Error(codes.FailedPrecondition, "storage only supports ReadWriteOnce access mode")
+			}
+			if capability.GetMount().GetFsType() == "" {
+				if err := checkIfKeyExistsInConfig(common.FsTypeConfigKey); err != nil {
+					return status.Error(codes.FailedPrecondition, "no fstype specified in storage class")
+				} else {
+					klog.InfoS("storage class parameter "+common.FsTypeConfigKey+" is deprecated. Please migrate to 'csi.storage.k8s.io/fstype'", "parameter", common.FsTypeConfigKey)
+				}
 			}
 		}
 	}

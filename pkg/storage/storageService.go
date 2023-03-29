@@ -119,6 +119,15 @@ func RemoveGatekeeper(volumeName string) {
 	gatekeepers.Unlock(volumeName)
 }
 
+// wrap the new FS type specification and fall back to the old parameter if necessary
+func GetFsType(req *csi.NodePublishVolumeRequest) string {
+	fsType := ""
+	if fsType = req.GetVolumeCapability().GetMount().GetFsType(); fsType == "" {
+		fsType = req.GetVolumeContext()[common.FsTypeConfigKey]
+	}
+	return fsType
+}
+
 // CheckFs: Perform a file system validation
 func CheckFs(path string, fstype string, context string) error {
 

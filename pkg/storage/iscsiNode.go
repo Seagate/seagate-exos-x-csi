@@ -144,7 +144,7 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		}
 	}
 
-	fsType := req.GetVolumeContext()[common.FsTypeConfigKey]
+	fsType := GetFsType(req)
 	err = EnsureFsType(fsType, path)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

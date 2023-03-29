@@ -13,6 +13,6 @@ parameters:
   csi.storage.k8s.io/controller-publish-secret-namespace: default
   csi.storage.k8s.io/controller-expand-secret-name: seagate-exos-x-csi-secrets
   csi.storage.k8s.io/controller-expand-secret-namespace: default
-  fsType: ext4 # Desired filesystem
+  csi.storage.k8s.io/fstype: ext4 # Desired filesystem
   pool: A # Pool to use on the IQN to provision volumes
   storageProtocol: iscsi # The storage interface (iscsi, fc, sas) being used for storage i/o
