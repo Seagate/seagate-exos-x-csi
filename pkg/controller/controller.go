@@ -291,8 +291,7 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 				if err := checkIfKeyExistsInConfig(common.FsTypeConfigKey); err != nil {
 					return status.Error(codes.FailedPrecondition, "no fstype specified in storage class")
 				} else {
-					klog.Warningf("storage class parameter %s is deprecated. Please migrate to 'csi.storage.k8s.io/fstype'",
-						common.FsTypeConfigKey)
+					klog.InfoS("storage class parameter "+common.FsTypeConfigKey+" is deprecated. Please migrate to 'csi.storage.k8s.io/fstype'", "parameter", common.FsTypeConfigKey)
 				}
 			}
 		}
