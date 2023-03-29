@@ -217,14 +217,15 @@ func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	if !connector.Multipath {
 		// If we didn't discover the multipath device initially, double check that we didn't just miss it
 		// Detach the discovered devices if they are found
-		klog.V(3).Info("Device saved as non-multipath. Searching for additional devices before Detach")
+		klog.V(3).InfoS("Device saved as non-multipath. Searching for additional devices before Detach")
 		if connector.IoHandler == nil {
 			connector.IoHandler = &fclib.OSioHandler{}
 		}
 		discoveredMpathName, devices := fclib.FindDiskById(klog.FromContext(ctx), wwn, connector.IoHandler)
 		if (discoveredMpathName != connector.OSPathName) && (len(devices) > 0) {
-			klog.V(0).Infof("Found additional linked devices: %s, %v", discoveredMpathName, devices)
-			klog.V(0).Infof("Replacing original connector info prior to Detach, device: %s=>%s, linked device paths: %v=>%v", connector.OSPathName, discoveredMpathName, connector.OSDevicePaths, devices)
+			klog.V(0).InfoS("Found additional linked devices", "path", discoveredMpathName, "devices", devices)
+			klog.V(0).InfoS("Replacing original connector info prior to Detach", "originalMultipathDevice", connector.OSPathName,
+				"discoveredMultipathDevice", discoveredMpathName, "originalLinkedDevices", connector.OSDevicePaths, "discoveredLinkedDevices", devices)
 			connector.OSPathName = discoveredMpathName
 			connector.OSDevicePaths = devices
 			connector.Multipath = true
