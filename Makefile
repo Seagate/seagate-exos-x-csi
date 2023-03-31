@@ -29,16 +29,14 @@ ifndef BIN
 	BIN = $(PROJECT)
 endif
 
-# GPG Signing key name
+# $HELM_KEY must be the name of a secret key in the invoker's default keyring if package is to be signed
 HELM_KEY := css-host-software
-HELM_IMAGE_REPO := $(DOCKER_HUB_REPOSITORY)/$(BIN)
-# $HELM_KEY must be the name of a secret key in the invoker's default keyring
 ifneq (,$(HELM_KEY))
   HELM_KEYRING := ~/.gnupg/secring.gpg
   HELM_SIGN := --sign --key $(HELM_KEY) --keyring $(HELM_KEYRING)
 endif 
 HELM_PACKAGE := $(BIN)-$(HELM_VERSION).tgz
-
+HELM_IMAGE_REPO := $(DOCKER_HUB_REPOSITORY)/$(BIN)
 IMAGE = $(DOCKER_HUB_REPOSITORY)/$(BIN):$(VERSION)
 
 help:
@@ -94,6 +92,19 @@ ubi:
 	@echo "[] ubi"
 	docker build -f Dockerfile.ubi -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
 
+
+push:
+	@echo ""
+	@echo "[] push"
+	docker push $(IMAGE)
+
+clean:
+	@echo ""
+	@echo "[] clean"
+	rm -vf $(BIN)-controller $(BIN)-node *.zip *.tgz *.prov helm/$(BIN)-$(HELM_VERSION)*
+
+######################## Openshift certification stuff ########################
+
 openshift:
 	@echo ""
 	@echo "[] openshift"
@@ -125,15 +136,8 @@ build-preflight:
 	(cd ..; git clone https://github.com/redhat-openshift-ecosystem/openshift-preflight.git)
 	cd ../openshift-preflight && make build
 
-push:
-	@echo ""
-	@echo "[] push"
-	docker push $(IMAGE)
+######################## Helm package creation ########################
 
-clean:
-	@echo ""
-	@echo "[] clean"
-	rm -vf $(BIN)-controller $(BIN)-node *.zip *.tgz *.prov helm/$(BIN)-$(HELM_VERSION)*
 
 # Create a helm package that can be installed from a remote HTTPS URL with, e.g.
 # helm install exos-x-csi https://<server>/<path>/seagate-exos-x-csi-1.0.0.tgz
