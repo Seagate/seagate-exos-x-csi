@@ -62,7 +62,7 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ steps.imagelc.outputs.lowercase }}:${{ steps.fetch-latest-release.outputs.latest-release }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: Dockerfile.ubi
+          file: Dockerfile.redhat
 
       - name: Inspect
         run: |
