@@ -1,3 +1,26 @@
+## [1.5.10](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.9...v1.5.10) (2023-04-05)
+
+### Bug Fixes
+
+- Add support for prefixed fstype parameter (#71) ([ada6d02](https://github.com/Seagate/seagate-exos-x-csi/commit/ada6d023dd45334436b6d5ec942f6deda18618e3)), closes [#71](https://github.com/Seagate/seagate-exos-x-csi/issues/71)
+- clarify comment for volPrefix in storageclass example ([daf3152](https://github.com/Seagate/seagate-exos-x-csi/commit/daf3152f5a8ce4c8e82a79e73d7c6d8539c9f4a3))
+- Port device rediscovery check into FC node (#72) ([f0ece2a](https://github.com/Seagate/seagate-exos-x-csi/commit/f0ece2a19da87ba7dcda12e2a92bdc277e7373cd)), closes [#72](https://github.com/Seagate/seagate-exos-x-csi/issues/72)
+- Update workflow to use Openshift compliant Dockerfile ([c87c2ad](https://github.com/Seagate/seagate-exos-x-csi/commit/c87c2ad5c753e8868b3c3f8176fc6d1292dc521c))
+
+### Build System
+
+- update values.yaml to latest 1.5.9 release ([f8b267f](https://github.com/Seagate/seagate-exos-x-csi/commit/f8b267fb983e7e00981ebf8ab82cf263b1e469b4))
+
+### Chores
+
+- add Makefile target to create a signed helm chart (#74) ([c707140](https://github.com/Seagate/seagate-exos-x-csi/commit/c707140fdebbfc28c888f2c0b42d060d86d458fd)), closes [#74](https://github.com/Seagate/seagate-exos-x-csi/issues/74)
+- Update default registry address to use registry.k8s.io ([2041882](https://github.com/Seagate/seagate-exos-x-csi/commit/2041882c905c3709fd34f4bb0e8609dbc1c93573))
+
+### Other
+
+- Update values.yaml ([511bb16](https://github.com/Seagate/seagate-exos-x-csi/commit/511bb164584cc9ed6712e32501cb57908d752742))
+- Merge pull request #73 from Seagate/bug#57-extra ([7d64a67](https://github.com/Seagate/seagate-exos-x-csi/commit/7d64a67850a030daac544da22c47cb4bff2af53e)), closes [#73](https://github.com/Seagate/seagate-exos-x-csi/issues/73) [Seagate/bug#57](https://github.com/Seagate/bug/issues/57) [#57](https://github.com/Seagate/seagate-exos-x-csi/issues/57)
+
 ## [1.5.9](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.8...v1.5.9) (2023-03-01)
 
 ### Bug Fixes
