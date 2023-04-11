@@ -19,6 +19,7 @@
 package storage
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -310,11 +311,6 @@ func (iscsi *iscsiStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("node expand volume path not found for volume id (%s)", volumeName))
 	}
 
-	// TODO: Is a rescan needed - rescan a scsi device by writing 1 in /sys/class/scsi_device/h:c:t:l/device/rescan
-	// for i := range connector.Devices {
-	// 	connector.Devices[i].Rescan()
-	// }
-
 	if connector.Multipath {
 		klog.V(2).Info("device is using multipath")
 		if err := iscsilib.ResizeMultipathDevice(connector.DevicePath); err != nil {
@@ -342,4 +338,29 @@ func (iscsi *iscsiStorage) NodeGetCapabilities(ctx context.Context, req *csi.Nod
 // NodeGetInfo returns info about the node
 func (iscsi *iscsiStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "NodeGetInfo is not implemented")
+}
+
+func GetISCSIInitiators() ([]string, error) {
+	initiatorNameFilePath := "/etc/iscsi/initiatorname.iscsi"
+	file, err := os.Open(initiatorNameFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if equal := strings.Index(line, "="); equal >= 0 {
+			if strings.TrimSpace(line[:equal]) == "InitiatorName" {
+				return []string{strings.TrimSpace(line[equal+1:])}, nil
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, fmt.Errorf("InitiatorName key is missing from %s", initiatorNameFilePath)
 }

@@ -29,6 +29,9 @@ spec:
             - seagate-exos-x-csi-controller
             - -bind=unix:///csi/csi.sock
 {{- include "csidriver.extraArgs" .Values.controller | indent 10 }}
+          env:
+            - name: EXOS-X-CSI-NODE-SERVICE-PORT
+              value: "978"
           volumeMounts:
             - name: socket-dir
               mountPath: /csi

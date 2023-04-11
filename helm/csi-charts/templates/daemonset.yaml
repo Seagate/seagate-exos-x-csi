@@ -38,6 +38,17 @@ spec:
             - -bind=unix://{{ .Values.kubeletPath }}/plugins/csi-exos-x.seagate.com/csi.sock
             - -chroot=/host
 {{- include "csidriver.extraArgs" .Values.node | indent 10 }}
+          env:
+            - name: EXOS-X-CSI-NODE-NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: EXOS-X-CSI-NODE-IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EXOS-X-CSI-NODE-SERVICE-PORT
+              value: "978"
           securityContext:
             privileged: true
           volumeMounts:

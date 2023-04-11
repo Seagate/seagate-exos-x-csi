@@ -1,0 +1,32 @@
+syntax = "proto3";
+package node_service;
+
+option go_package = "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/protocolbuffers/node_servicepb";
+
+service NodeService {
+    rpc GetInitiators(InitiatorRequest) returns (Initiators){}
+    rpc NotifyUnmap(UnmappedVolume) returns (Ack){}
+}
+
+enum InitiatorType{
+    UNSPECIFIED = 0;
+    FC = 1;
+    SAS = 2;
+    ISCSI = 3;
+}
+
+message InitiatorRequest {
+    InitiatorType type = 1;
+}
+
+message Initiators {
+    repeated string initiators = 1;
+}
+
+message UnmappedVolume {
+    string volumeName = 1;
+}
+
+message Ack {
+    int32 ack = 1;
+}
