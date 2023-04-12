@@ -47,6 +47,11 @@ const (
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 31
 	VolumePrefixMaxLength = 3
+
+	//If changed, must also be updated in helm charts
+	NodeIPEnvVar          = "CSI_NODE_IP"
+	NodeNameEnvVar        = "CSI_NODE_NAME"
+	NodeServicePortEnvVar = "CSI_NODE_SERVICE_PORT"
 )
 
 // Driver contains main resources needed by the driver and references the underlying specific driver

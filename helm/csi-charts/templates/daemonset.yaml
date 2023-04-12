@@ -39,15 +39,15 @@ spec:
             - -chroot=/host
 {{- include "csidriver.extraArgs" .Values.node | indent 10 }}
           env:
-            - name: EXOS-X-CSI-NODE-NAME
+            - name: CSI_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: EXOS-X-CSI-NODE-IP
+            - name: CSI_NODE_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: EXOS-X-CSI-NODE-SERVICE-PORT
+            - name: CSI_NODE_SERVICE_PORT
               value: "978"
           securityContext:
             privileged: true

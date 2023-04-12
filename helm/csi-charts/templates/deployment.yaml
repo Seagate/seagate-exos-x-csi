@@ -30,7 +30,7 @@ spec:
             - -bind=unix:///csi/csi.sock
 {{- include "csidriver.extraArgs" .Values.controller | indent 10 }}
           env:
-            - name: EXOS-X-CSI-NODE-SERVICE-PORT
+            - name: CSI_NODE_SERVICE_PORT
               value: "978"
           volumeMounts:
             - name: socket-dir

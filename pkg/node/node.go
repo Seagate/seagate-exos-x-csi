@@ -37,15 +37,15 @@ func New() *Node {
 		iscsi.EnableDebugLogging(os.Stderr)
 	}
 
-	envNodeName, _ := os.LookupEnv("EXOS-X-CSI-NODE-NAME")
-	nodeIP, envFound := os.LookupEnv("EXOS-X-CSI-NODE-IP")
+	envNodeName, _ := os.LookupEnv(common.NodeNameEnvVar)
+	nodeIP, envFound := os.LookupEnv(common.NodeIPEnvVar)
 	if !envFound {
 		klog.InfoS("no Node IP found in environment. Using default")
 		nodeIP = "127.0.0.1"
 	}
-	envServicePort, envFound := os.LookupEnv("EXOS-X-CSI-NODE-SERVICE-PORT")
+	envServicePort, envFound := os.LookupEnv(common.NodeServicePortEnvVar)
 	if !envFound {
-		klog.InfoS("no Node service port found in environment. Using default")
+		klog.InfoS("no node service port found in environment. Using default")
 		envServicePort = "978"
 	}
 
