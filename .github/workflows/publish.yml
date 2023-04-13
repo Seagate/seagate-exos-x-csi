@@ -18,15 +18,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Fetch latest release version
         id: fetch-latest-release
-        uses: reloc8/action-latest-release-version@1.0.0
+        run: |
+         latest_release=$(curl -Ls \
+           -H "Accept: application/vnd.github+json" \
+           -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+           -H "X-GitHub-Api-Version: 2022-11-28" \
+           $GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/latest | jq --raw-output '.tag_name')
+         echo "latest_release is $latest_release"
+         echo "latest-release=$latest_release" >> $GITHUB_OUTPUT
 
       - name: Lowercase
         id: imagelc
-        uses: ASzc/change-string-case-action@v1
+        uses: ASzc/change-string-case-action@v5
         with:
           string: ${{ github.repository }}
 
@@ -42,7 +49,7 @@ jobs:
           make bin
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -50,13 +57,13 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ steps.imagelc.outputs.lowercase }}
 
       - name: Build and Push Docker Image
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           push: true
