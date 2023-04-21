@@ -45,7 +45,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
-	klog.Infof("attach request for initiator(s) %v, volume id: %s", initiators, volumeName)
+	klog.InfoS("attach request", "initiator(s)", initiators, "volume", volumeName)
 
 	lun, err := driver.client.PublishVolume(volumeName, initiators)
 
