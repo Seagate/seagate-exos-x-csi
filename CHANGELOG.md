@@ -1,3 +1,14 @@
+## [1.5.11](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.10...v1.5.11) (2023-04-24)
+
+### Build System
+
+- Update deprecated actions in publish.yml ([c7389d5](https://github.com/Seagate/seagate-exos-x-csi/commit/c7389d5743f41da7de58e6ac638d6e256bba6169))
+- Update github release action to use actions v3 ([b34bb05](https://github.com/Seagate/seagate-exos-x-csi/commit/b34bb05635d51f3a6612e46b309fd64fae2bfb68))
+
+### Code Refactoring
+
+- New node gRPC server for initiator retrieval (#76) ([d44a487](https://github.com/Seagate/seagate-exos-x-csi/commit/d44a487278351157ae48e0dfa73ac5e2dd25613f)), closes [#76](https://github.com/Seagate/seagate-exos-x-csi/issues/76)
+
 ## [1.5.10](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.9...v1.5.10) (2023-04-05)
 
 ### Bug Fixes
