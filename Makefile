@@ -60,7 +60,12 @@ help:
 all: clean bin openshift push
 openshift-all: clean openshift push
 
-bin: controller node
+bin: protoc controller node
+
+protoc: 
+	@echo ""
+	@echo "[] protocol buffers"
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative ./pkg/node_service/node_servicepb/node_rpc.proto
 
 controller:
 	@echo ""

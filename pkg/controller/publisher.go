@@ -2,63 +2,15 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"strings"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
+	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 )
-
-// getConnectorInfoPath
-func (driver *Controller) getConnectorInfoPath(volumeID string) string {
-	return fmt.Sprintf("%s/%s.json", driver.runPath, volumeID)
-}
-
-// Read connector json file and return initiator address info for the given volume
-func (driver *Controller) readInitiatorMapFromFile(filePath string, volumeID string) ([]string, error) {
-	klog.Infof("Reading initiator value for volume %v from file %v", volumeID, filePath)
-	f, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	initiatorMap := make(map[string][]string)
-	err = json.Unmarshal(f, &initiatorMap)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling initiator info file for specified volume ID %v", volumeID)
-	}
-	initiators, found := initiatorMap[volumeID]
-	if found {
-		return initiators, nil
-	} else {
-		return nil, fmt.Errorf("initiator value for volume ID %v not found", volumeID)
-	}
-}
-
-// PersistConnector persists the provided Connector to the specified file
-func persistInitiatorMap(volumeID string, initiators []string, filePath string) error {
-	initiatorMap := map[string][]string{
-		volumeID: initiators,
-	}
-	f, err := os.Create(filePath)
-	if err != nil {
-		klog.Error("error encoding initiator info: %v", err)
-		return fmt.Errorf("error creating initiator map file %s: %s", filePath, err)
-	}
-	defer f.Close()
-	encoder := json.NewEncoder(f)
-	if err = encoder.Encode(initiatorMap); err != nil {
-		klog.Error("error encoding initiator info: %v", err)
-		return fmt.Errorf("error encoding initiator info: %v", err)
-	}
-	klog.Infof("wrote initiator persistence file at %s", filePath)
-	return nil
-}
 
 // ControllerPublishVolume attaches the given volume to the node
 func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -71,35 +23,31 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	if req.GetVolumeCapability() == nil {
 		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
 	}
+
+	nodeIP := req.GetNodeId()
 	parameters := req.GetVolumeContext()
 
-	initiatorMapNodeID := common.GetTopologyCompliantNodeID(req.GetNodeId())
-	var initiatorNames []string
+	var reqType pb.InitiatorType
+	switch parameters[common.StorageProtocolKey] {
+	case common.StorageProtocolSAS:
+		reqType = pb.InitiatorType_SAS
+	case common.StorageProtocolFC:
+		reqType = pb.InitiatorType_FC
+	case common.StorageProtocolISCSI:
+		reqType = pb.InitiatorType_ISCSI
+	}
 
-	// Available initiators for the node are provided in parameters through NodeGetInfo
-	if parameters[common.StorageProtocolKey] == common.StorageProtocolSAS {
-		for key, val := range parameters {
-			if strings.Contains(key, common.TopologySASInitiatorLabel) && strings.Contains(key, initiatorMapNodeID) {
-				initiatorNames = append(initiatorNames, val)
-			}
-		}
-	} else if parameters[common.StorageProtocolKey] == common.StorageProtocolFC {
-		for key, val := range parameters {
-			if strings.Contains(key, common.TopologyFCInitiatorLabel) && strings.Contains(key, initiatorMapNodeID) {
-				initiatorNames = append(initiatorNames, val)
-			}
-		}
-	} else {
-		initiatorNames = []string{req.GetNodeId()}
+	initiators, err := node_service.GetNodeInitiators(nodeIP, reqType)
+	if err != nil {
+		klog.ErrorS(err, "error getting node initiators", "node-ip", nodeIP, "storage-protocol", reqType)
+		return nil, err
 	}
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-	persistentInfoFilepath := driver.getConnectorInfoPath(req.GetVolumeId())
-	persistInitiatorMap(volumeName, initiatorNames, persistentInfoFilepath)
 
-	klog.Infof("attach request for initiator(s) %v, volume id: %s", initiatorNames, volumeName)
+	klog.InfoS("attach request", "initiator(s)", initiators, "volume", volumeName)
 
-	lun, err := driver.client.PublishVolume(volumeName, initiatorNames)
+	lun, err := driver.client.PublishVolume(volumeName, initiators)
 
 	if err != nil {
 		return nil, err
@@ -119,17 +67,30 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
 	var initiators []string
-	var err error
-	if protocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId()); protocol == common.StorageProtocolSAS {
-		initiators, err = driver.readInitiatorMapFromFile(driver.getConnectorInfoPath(req.GetVolumeId()), volumeName)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving initiator! cannot unpublish volume %v", volumeName)
-		}
-	} else {
-		initiators = []string{req.GetNodeId()}
+
+	nodeIP := req.GetNodeId()
+	storageProtocol, err := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
+	if err != nil {
+		klog.ErrorS(err, "No storage protocol found in ControllerUnpublishVolume", "storage protocol", storageProtocol, "volume ID:", req.GetVolumeId())
+		return nil, err
 	}
 
-	klog.Infof("unmapping volume %s from initiator %s", volumeName, initiators)
+	var reqType pb.InitiatorType
+	switch storageProtocol {
+	case common.StorageProtocolSAS:
+		reqType = pb.InitiatorType_SAS
+	case common.StorageProtocolFC:
+		reqType = pb.InitiatorType_FC
+	case common.StorageProtocolISCSI:
+		reqType = pb.InitiatorType_ISCSI
+	}
+
+	initiators, err = node_service.GetNodeInitiators(nodeIP, reqType)
+	if err != nil {
+		klog.ErrorS(err, "error getting initiators from the node", "nodeIP", nodeIP, "storage-protocol", reqType)
+	}
+
+	klog.InfoS("unmapping volume from initiator", "volumeName", volumeName, "initiators", initiators)
 	for _, initiator := range initiators {
 		_, status, err := driver.client.UnmapVolume(volumeName, initiator)
 		if err != nil {
@@ -140,9 +101,6 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 			}
 		}
 	}
-
-	persistentInfoFilepath := driver.getConnectorInfoPath(req.GetVolumeId())
-	os.Remove(persistentInfoFilepath)
 
 	klog.Infof("successfully unmapped volume %s from all initiators", volumeName)
 	return &csi.ControllerUnpublishVolumeResponse{}, nil

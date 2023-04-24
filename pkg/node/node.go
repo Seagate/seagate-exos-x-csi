@@ -10,6 +10,7 @@ import (
 
 	"github.com/Seagate/csi-lib-iscsi/iscsi"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes/wrappers"
@@ -26,6 +27,8 @@ type Node struct {
 
 	semaphore *semaphore.Weighted
 	runPath   string
+	nodeName  string
+	nodeIP    string
 }
 
 // New is a convenience function for creating a node driver
@@ -34,10 +37,24 @@ func New() *Node {
 		iscsi.EnableDebugLogging(os.Stderr)
 	}
 
+	envNodeName, _ := os.LookupEnv(common.NodeNameEnvVar)
+	nodeIP, envFound := os.LookupEnv(common.NodeIPEnvVar)
+	if !envFound {
+		klog.InfoS("no Node IP found in environment. Using default")
+		nodeIP = "127.0.0.1"
+	}
+	envServicePort, envFound := os.LookupEnv(common.NodeServicePortEnvVar)
+	if !envFound {
+		klog.InfoS("no node service port found in environment. Using default")
+		envServicePort = "978"
+	}
+
 	node := &Node{
 		Driver:    common.NewDriver(),
 		semaphore: semaphore.NewWeighted(1),
 		runPath:   fmt.Sprintf("/var/run/%s", common.PluginName),
+		nodeName:  envNodeName,
+		nodeIP:    nodeIP,
 	}
 
 	if err := os.MkdirAll(node.runPath, 0755); err != nil {
@@ -96,46 +113,17 @@ func New() *Node {
 	csi.RegisterIdentityServer(node.Server, node)
 	csi.RegisterNodeServer(node.Server, node)
 
+	// initialize node communication service
+	go node_service.ListenAndServe(envServicePort)
+
 	return node
 }
 
 // NodeGetInfo returns info about the node
 func (node *Node) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	initiatorName, err := readInitiatorName()
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-
-	topology := map[string]string{}
-	sasAddresses, err := storage.GetSASInitiators()
-	if err != nil {
-		klog.Warningf("Error while searching for FC HBA Addresses: %s", err)
-	}
-	fcAddresses, err := storage.GetFCInitiators()
-	if err != nil {
-		klog.Warningf("Error while searching for FC HBA Addresses: %s", err)
-	}
-
-	for i, sasAddr := range sasAddresses {
-		//maximum value length 63 chars
-		topoKey := fmt.Sprintf("%s/%s-%d", common.TopologyInitiatorPrefix, common.TopologySASInitiatorLabel, i)
-		topology[topoKey] = sasAddr
-	}
-
-	for i, fcAddr := range fcAddresses {
-		topoKey := fmt.Sprintf("%s/%s-%d", common.TopologyInitiatorPrefix, common.TopologyFCInitiatorLabel, i)
-		topology[topoKey] = fcAddr
-	}
-
-	topology[common.TopologyNodeIDKey] = common.GetTopologyCompliantNodeID(initiatorName)
-
-	klog.Infof("Node Accessible Topology: %v", topology)
 	return &csi.NodeGetInfoResponse{
-		NodeId:            initiatorName,
+		NodeId:            node.nodeIP,
 		MaxVolumesPerNode: 255,
-		AccessibleTopology: &csi.Topology{
-			Segments: topology,
-		},
 	}, nil
 }
 
