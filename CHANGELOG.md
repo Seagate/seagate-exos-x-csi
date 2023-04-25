@@ -1,3 +1,13 @@
+## [1.6.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.1...v1.6.2) (2023-04-25)
+
+### Bug Fixes
+
+- fix typo in go protoc plugin version ([b24abc4](https://github.com/Seagate/seagate-exos-x-csi/commit/b24abc4f889620349e7e8a065e094ef1eeb346a2))
+
+### Build System
+
+- Update values.yaml for 1.6.2 release ([f491335](https://github.com/Seagate/seagate-exos-x-csi/commit/f491335bb62ab73c245c1778849b68bbcf724b79))
+
 ## [1.6.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.0...v1.6.1) (2023-04-25)
 
 ### Build System
