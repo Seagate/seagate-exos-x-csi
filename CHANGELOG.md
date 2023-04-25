@@ -1,3 +1,13 @@
+## [1.6.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.0...v1.6.1) (2023-04-25)
+
+### Build System
+
+- Install protoc go plugin during build ([c7ad1e5](https://github.com/Seagate/seagate-exos-x-csi/commit/c7ad1e502ef731c822f344f3be4f328b84191389))
+
+### Other
+
+- 1.6.1 Release ([7c4951e](https://github.com/Seagate/seagate-exos-x-csi/commit/7c4951e46b82613eb2c8875063e8b361d855d747))
+
 # [1.6.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.11...v1.6.0) (2023-04-25)
 
 ### Build System
