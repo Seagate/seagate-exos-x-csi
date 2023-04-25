@@ -17,6 +17,13 @@ jobs:
       packages: write
 
     steps:
+      - name: Install protocol buffers compiler
+        run: |
+          wget https://github.com/protocolbuffers/protobuf/releases/download/v22.3/protoc-22.3-linux-x86_64.zip
+          unzip protoc-22.3-linux-x86_64.zip -d $HOME/.local
+          export PATH="$PATH:$HOME/.local/bin"
+          echo "protoc version installed: " $(protoc --version)
+
       - name: Checkout
         uses: actions/checkout@v3
 
