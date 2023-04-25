@@ -17,6 +17,11 @@ jobs:
       packages: write
 
     steps:
+      - name: Install protocol buffers compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          
       - name: Checkout
         uses: actions/checkout@v3
 
