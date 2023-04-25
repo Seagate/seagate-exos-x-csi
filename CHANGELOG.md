@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.2...v1.6.3) (2023-04-25)
+
+### Build System
+
+- install protoc and gRPC tools for building node service ([921cd6a](https://github.com/Seagate/seagate-exos-x-csi/commit/921cd6adab4a2ffdbe473247938d559136423419))
+- Update values.yaml for 1.6.3 ([2a8e386](https://github.com/Seagate/seagate-exos-x-csi/commit/2a8e386f7f43b7f8930433567321e928de14bbf8))
+
 ## [1.6.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.1...v1.6.2) (2023-04-25)
 
 ### Bug Fixes
