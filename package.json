@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/Seagate/seagate-exos-x-csi#readme",
   "devDependencies": {
-    "semantic-release": "^19.0.3"
+    "semantic-release": "^21.0.1"
   }
 }
