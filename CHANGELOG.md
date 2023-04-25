@@ -1,3 +1,13 @@
+# [1.6.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.11...v1.6.0) (2023-04-25)
+
+### Build System
+
+- Install protocol buffer compiler for gRPC service build ([468551f](https://github.com/Seagate/seagate-exos-x-csi/commit/468551fe5d255c2d834a08da207e53fb2f4d6e9f))
+
+### Features
+
+- 1.6.0 Release ([c685d33](https://github.com/Seagate/seagate-exos-x-csi/commit/c685d33c29a9eb000437e2a739ba19959bfae227))
+
 ## [1.5.11](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.5.10...v1.5.11) (2023-04-24)
 
 ### Build System
