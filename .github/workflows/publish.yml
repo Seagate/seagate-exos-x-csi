@@ -21,8 +21,9 @@ jobs:
         run: |
           wget https://github.com/protocolbuffers/protobuf/releases/download/v22.3/protoc-22.3-linux-x86_64.zip
           unzip protoc-22.3-linux-x86_64.zip -d $HOME/.local
-          export PATH="$PATH:$HOME/.local/bin"
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+          echo "$PATH:$(go env GOPATH)/bin" >> $GITHUB_PATH
           echo "protoc version installed: " $(protoc --version)
 
       - name: Checkout
