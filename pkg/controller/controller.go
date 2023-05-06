@@ -9,7 +9,7 @@ import (
 	"sync"
 	"syscall"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/exosx"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
 	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/exosx"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
