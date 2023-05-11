@@ -10,11 +10,14 @@ sources:
 keywords:
   - storage
   - iscsi
+  - fc
+  - sas
   - plugin
   - csi
 maintainers:
   - name: Seagate
     url: https://github.com/Seagate
+    email: css-host-software@seagate.com
   - name: Joe Skazinski
     email: joseph.skazinski@seagate.com
 annotations:
