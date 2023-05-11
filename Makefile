@@ -20,7 +20,7 @@ endif
 ifdef VERSION
 VERSION := $(VERSION)
 else
-VERSION := v1.5.9
+VERSION := v1.6.3
 endif
 HELM_VERSION := $(subst v,,$(VERSION))
 VERSION_FLAG = -X $(GITHUB_URL)/pkg/common.Version=$(VERSION)
@@ -103,6 +103,11 @@ push:
 	@echo "[] push"
 	docker push $(IMAGE)
 
+pull:
+	@echo ""
+	@echo "[] pull"
+	docker pull $(IMAGE)
+
 clean:
 	@echo ""
 	@echo "[] clean"
@@ -121,21 +126,47 @@ openshift:
 	docker build -f Dockerfile.redhat -t $(IMAGE) .
 	docker inspect $(IMAGE)
 
+# Makefile.secrets should include the following lines:
+#
+#   PYXIS_API_TOKEN=<pyxis-api-token>
+#   REGISTRY_KEY=<redhat-registry-key> (see )
+#
+# For more info, see the CSI Driver "Re-certifying" OneNote page, or
+#   https://connect.redhat.com/account/api-keys?extIdCarryOver=true&sc_cid=701f2000001OH7JAAW
+#   https://connect.redhat.com/projects/610494ea40182fa9651cdab0/setup-preflight
+#
+# Make sure this file does not get checked in to git!  Note that for automation purposes you can
+# just pass these variables in the environment instead of a file.
+-include Makefile.secrets
+
 PREFLIGHT=../openshift-preflight/preflight
 PREFLIGHT_REGISTRY=localhost:5000
 PREFLIGHT_IMAGE=$(PREFLIGHT_REGISTRY)/$(BIN):$(VERSION)
-# PREFLIGHT_OPTIONS would typically include "--certification-project-id=xxx --pyxis-api-token=xxx"
-PREFLIGHT_OPTIONS:=$(strip $(shell test ! -f .preflight_options || cat .preflight_options))
+REDHAT_PROJECT_ID=610494ea40182fa9651cdab0
+REDHAT_IMAGE_BASE=quay.io/redhat-isv-containers/$(REDHAT_PROJECT_ID)
+REDHAT_IMAGE=$(REDHAT_IMAGE_BASE):$(VERSION)
+REDHAT_IMAGE_LATEST=$(REDHAT_IMAGE_BASE):latest
+PREFLIGHT_OPTIONS=
 PREFLIGHT_SUBMIT=
 
 preflight:
 	-docker run -d -p 5000:5000 --name registry registry:2 # make sure local registry is running
 	docker tag $(IMAGE) $(PREFLIGHT_IMAGE)
 	docker push $(PREFLIGHT_IMAGE)
-	$(PREFLIGHT) check container $(PREFLIGHT_SUBMIT) $(PREFLIGHT_OPTIONS) $(PREFLIGHT_IMAGE)
+	$(PREFLIGHT) check container $(PREFLIGHT_SUBMIT) $(PREFLIGHT_OPTIONS) $(PREFLIGHT_IMAGE) \
+		PFLT_DOCKERCONFIG=$(PFLT_DOCKERCONFIG)
 
-preflight-submit: .preflight_options
-	$(MAKE) preflight PREFLIGHT_SUBMIT=--submit
+preflight-submit: .preflight-auth.json
+	$(MAKE) preflight PREFLIGHT_SUBMIT="--submit" \
+		PREFLIGHT_OPTIONS="--pyxis-api-token=$(PYXIS_API_TOKEN) --certification-project-id=$(REDHAT_PROJECT_ID)" \
+		PREFLIGHT_IMAGE=$(REDHAT_IMAGE) PFLT_DOCKERCONFIG=.preflight-auth.json
+
+tag-latest:
+	podman tag $(REDHAT_IMAGE) $(REDHAT_IMAGE_LATEST)
+	podman push $(REDHAT_IMAGE_LATEST)
+
+.preflight-auth.json:
+	podman login -u redhat-isv-containers+610494ea40182fa9651cdab0-robot -p $(REGISTRY_KEY) --authfile "$@" quay.io
 
 build-preflight:
 	(cd ..; git clone https://github.com/redhat-openshift-ecosystem/openshift-preflight.git)
