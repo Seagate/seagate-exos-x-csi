@@ -25,7 +25,8 @@ func (s *server) GetInitiators(ctx context.Context, in *pb.InitiatorRequest) (*p
 	case pb.InitiatorType_ISCSI:
 		initiators, err = storage.GetISCSIInitiators()
 	case pb.InitiatorType_UNSPECIFIED:
-		klog.InfoS("Unspecified initiator type in initiator request")
+		klog.InfoS("Unspecified initiator type in initiator request, defaulting to iSCSI")
+		initiators, err = storage.GetISCSIInitiators()
 	}
 	if err != nil {
 		return nil, err
