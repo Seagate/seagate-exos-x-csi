@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
+
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
@@ -68,9 +70,9 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 
 	klog.InfoS("unmapping volume from initiator", "volumeName", volumeName, "initiators", initiators)
 	for _, initiator := range initiators {
-		_, status, err := driver.client.UnmapVolume(volumeName, initiator)
+		status, err := driver.client.UnmapVolume(volumeName, initiator)
 		if err != nil {
-			if status != nil && status.ReturnCode == unmapFailedErrorCode {
+			if status != nil && status.ReturnCode == storageapitypes.UnmapFailedErrorCode {
 				klog.Info("unmap failed, assuming volume is already unmapped")
 			} else {
 				klog.Errorf("unknown error while unmapping initiator %s: %v", initiator, err)

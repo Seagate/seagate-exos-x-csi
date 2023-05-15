@@ -20,16 +20,16 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const (
-	snapshotNotFoundErrorCode             = -10050
-	hostMapDoesNotExistsErrorCode         = -10074
-	volumeNotFoundErrorCode               = -10075
-	volumeHasSnapshot                     = -10183
-	snapshotAlreadyExists                 = -10186
-	initiatorNicknameOrIdentifierNotFound = -10386
-	unmapFailedErrorCode                  = -10509
-	invalidArgumentErrorCode              = -10058
-)
+var volumeCapabilities = []*csi.VolumeCapability{
+	{
+		AccessType: &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{},
+		},
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+	},
+}
 
 var csiMutexes = map[string]*sync.Mutex{
 	"/csi.v1.Controller/CreateVolume":              {},
@@ -226,7 +226,7 @@ func (controller *Controller) beginRoutine(ctx *DriverCtx, methodName string) er
 }
 
 func (controller *Controller) endRoutine() {
-	controller.client.HTTPClient.CloseIdleConnections()
+	controller.client.CloseConnections()
 }
 
 func (controller *Controller) configureClient(credentials map[string]string) error {
@@ -251,10 +251,8 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return nil
 	}
 
-	controller.client.Username = username
-	controller.client.Password = password
-	controller.client.Addr = apiAddr
-	klog.Infof("login to API address %q as user %q", controller.client.Addr, controller.client.Username)
+	klog.Infof("login to API address %q as user %q", apiAddr, username)
+	controller.client.StoreCredentials(apiAddr, username, password)
 	err := controller.client.Login()
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())

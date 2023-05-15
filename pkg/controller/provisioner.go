@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
+
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -72,7 +74,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	size := req.GetCapacityRange().GetRequiredBytes()
 	sizeStr := getSizeStr(size)
 	pool := parameters[common.PoolConfigKey]
-	poolType, _ := controller.client.Info.GetPoolType(pool)
+	poolType, _ := controller.client.GetPoolType(pool)
 	wwn := ""
 
 	if len(poolType) == 0 {
@@ -104,10 +106,10 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			if err != nil {
 				return nil, err
 			}
-			_, apistatus, err2 := controller.client.CopyVolume(sourceName, volumeName, parameters[common.PoolConfigKey])
+			apistatus, err2 := controller.client.CopyVolume(sourceName, volumeName, parameters[common.PoolConfigKey])
 			if err2 != nil {
 				klog.Infof("-- CopyVolume apistatus.ReturnCode %v", apistatus.ReturnCode)
-				if apistatus != nil && apistatus.ReturnCode == snapshotNotFoundErrorCode {
+				if apistatus != nil && apistatus.ReturnCode == storageapitypes.SnapshotNotFoundErrorCode {
 					return nil, status.Errorf(codes.NotFound, "Snapshot source (%s) not found", sourceId)
 				} else {
 					return nil, err2
@@ -115,7 +117,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			}
 
 		} else {
-			_, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
+			_, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
 			if err2 != nil {
 				return nil, err
 			}
@@ -129,7 +131,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			klog.Errorf("++ GetTargetId error: %v", err1)
 		}
 		req.GetParameters()["iqn"] = targetId
-		portals, err2 := controller.client.Info.GetPortals()
+		portals, err2 := controller.client.GetPortals()
 		if err2 != nil {
 			klog.Errorf("++ GetPortals error: %v", err2)
 		}
@@ -164,13 +166,13 @@ func (controller *Controller) DeleteVolume(ctx context.Context, req *csi.DeleteV
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	klog.Infof("deleting volume %s", volumeName)
 
-	_, respStatus, err := controller.client.DeleteVolume(volumeName)
+	respStatus, err := controller.client.DeleteVolume(volumeName)
 	if err != nil {
 		if respStatus != nil {
-			if respStatus.ReturnCode == volumeNotFoundErrorCode {
+			if respStatus.ReturnCode == storageapitypes.VolumeNotFoundErrorCode {
 				klog.Infof("volume %s does not exist, assuming it has already been deleted", volumeName)
 				return &csi.DeleteVolumeResponse{}, nil
-			} else if respStatus.ReturnCode == volumeHasSnapshot {
+			} else if respStatus.ReturnCode == storageapitypes.VolumeHasSnapshot {
 				return nil, status.Error(codes.FailedPrecondition, fmt.Sprintf("volume %s cannot be deleted since it has snapshots", volumeName))
 			}
 		}
