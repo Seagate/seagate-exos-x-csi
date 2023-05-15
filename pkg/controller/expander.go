@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -30,21 +29,21 @@ func (controller *Controller) ControllerExpandVolume(ctx context.Context, req *c
 	var expansionSize int64
 	if err != nil {
 		return nil, err
-	} else if volume, ok := response.ObjectsMap["volume"]; !ok {
+	} else if len(response) == 0 {
 		return nil, fmt.Errorf("volume %q not found", volumeName)
-	} else if sizeNumeric, ok := volume.PropertiesMap["size-numeric"]; !ok {
+	} else if response[0].SizeNumeric == 0 {
 		return nil, fmt.Errorf("could not get current volume size, thus volume expansion is not possible")
-	} else if currentBlocks, err := strconv.ParseInt(sizeNumeric.Data, 10, 32); err != nil {
+	} else if response[0].Blocks == 0 {
 		return nil, fmt.Errorf("could not parse volume size: %v", err)
 	} else {
-		currentSize := currentBlocks * 512
+		currentSize := response[0].Blocks * response[0].BlockSize
 		klog.V(2).Infof("current size: %d bytes", currentSize)
 		expansionSize = newSize - currentSize
 		klog.V(2).Infof("expanding volume by %d bytes", expansionSize)
 	}
 
 	expansionSizeStr := getSizeStr(expansionSize)
-	if _, _, err := controller.client.ExpandVolume(volumeName, expansionSizeStr); err != nil {
+	if _, err := controller.client.ExpandVolume(volumeName, expansionSizeStr); err != nil {
 		return nil, err
 	}
 
