@@ -2,6 +2,9 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
@@ -11,6 +14,23 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 )
+
+func nodeIsHealthy(nodeAddress string) bool {
+	url := fmt.Sprintf("http://%s:9808/healthz", nodeAddress)
+	resp, err := http.Get(url)
+	if err != nil {
+		klog.ErrorS(err, "error checking node health endpoint", "healthz-address", url)
+		return false
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		klog.V(5).ErrorS(err, "error reading response from healthz endpoint")
+		return false
+	}
+	klog.V(5).InfoS("node healthz response retrieved", "response", body)
+	return string(body) == "ok"
+}
 
 // ControllerPublishVolume attaches the given volume to the node
 func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -25,6 +45,9 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	}
 
 	nodeIP := req.GetNodeId()
+	if !nodeIsHealthy(nodeIP) {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("scheduled node(%s) not found or not healthy", nodeIP))
+	}
 	parameters := req.GetVolumeContext()
 
 	var reqType pb.InitiatorType
