@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/exosx"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
@@ -137,7 +138,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 
 	if storageProtocol == common.StorageProtocolISCSI {
 		// Fill iSCSI context parameters
-		targetId, err1 := controller.client.Info.GetTargetId("iSCSI")
+		targetId, err1 := storageapi.GetTargetId(controller.client.Info, "iSCSI")
 		if err1 != nil {
 			klog.Errorf("++ GetTargetId error: %v", err1)
 		}
