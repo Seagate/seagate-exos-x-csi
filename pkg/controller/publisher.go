@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
@@ -40,7 +41,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	initiators, err := node_service.GetNodeInitiators(nodeIP, reqType)
 	if err != nil {
 		klog.ErrorS(err, "error getting node initiators", "node-ip", nodeIP, "storage-protocol", reqType)
-		return nil, err
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Could not retrieve initiators for scheduled node(%s)", nodeIP))
 	}
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
