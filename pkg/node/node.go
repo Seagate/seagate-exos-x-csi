@@ -25,10 +25,11 @@ import (
 type Node struct {
 	*common.Driver
 
-	semaphore *semaphore.Weighted
-	runPath   string
-	nodeName  string
-	nodeIP    string
+	semaphore  *semaphore.Weighted
+	runPath    string
+	nodeName   string
+	nodeIP     string
+	nodeServer *grpc.Server
 }
 
 // New is a convenience function for creating a node driver
@@ -247,6 +248,12 @@ func (node *Node) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeR
 // getConnectorInfoPath
 func (node *Node) getConnectorInfoPath(storageProtocol, volumeID string) string {
 	return fmt.Sprintf("%s/%s-%s.json", node.runPath, storageProtocol, volumeID)
+}
+
+// Graceful shutdown of the node-controller RPC server
+func (node *Node) Stop() {
+	klog.V(3).InfoS("Controller code graceful shutdown..")
+	node.nodeServer.GracefulStop()
 }
 
 // checkHostBinary: Determine if a binary image is installed or not

@@ -35,6 +35,8 @@ func (s *server) GetInitiators(ctx context.Context, in *pb.InitiatorRequest) (*p
 }
 
 func (s *server) NotifyUnmap(ctx context.Context, in *pb.UnmappedVolume) (*pb.Ack, error) {
+	delete(storage.GlobalRemovedDevicesMap, in.GetVolumeName())
+	klog.V(5).InfoS("Global unmapped device map deletion", "globalMap", storage.GlobalRemovedDevicesMap, "volumeName", in.GetVolumeName())
 	return &pb.Ack{Ack: 1}, nil
 }
 

@@ -84,7 +84,7 @@ func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 	klog.Infof("attached device at %s", path)
 
 	// if current wwn has been published before, remove it from our list of previously unpublished wwns
-	delete(globalRemovedDevicesMap, wwn)
+	delete(GlobalRemovedDevicesMap, wwn)
 	// check if previously unpublished devices were rediscovered by the scsi subsystem during Attach
 	checkPreviouslyRemovedDevices(ctx)
 
@@ -242,7 +242,7 @@ func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	klog.Infof("deleting FC connection info file %s", fc.connectorInfoPath)
 	os.Remove(fc.connectorInfoPath)
 
-	globalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
+	GlobalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
 
 	klog.Info("successfully detached FC device")
 	return &csi.NodeUnpublishVolumeResponse{}, nil

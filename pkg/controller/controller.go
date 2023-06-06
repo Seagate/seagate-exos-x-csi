@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	storageapi "github.com/Seagate/seagate-exos-x-api-go"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
+	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
+	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -60,8 +64,9 @@ var nonAuthenticatedMethods = []string{
 type Controller struct {
 	*common.Driver
 
-	client  *storageapi.Client
-	runPath string
+	client             *storageapi.Client
+	nodeServiceClients map[string]*grpc.ClientConn
+	runPath            string
 }
 
 // DriverCtx contains data common to most calls
@@ -75,9 +80,10 @@ type DriverCtx struct {
 func New() *Controller {
 	client := storageapi.NewClient()
 	controller := &Controller{
-		Driver:  common.NewDriver(client.Collector),
-		client:  client,
-		runPath: fmt.Sprintf("/var/run/%s", common.PluginName),
+		Driver:             common.NewDriver(client.Collector),
+		client:             client,
+		runPath:            fmt.Sprintf("/var/run/%s", common.PluginName),
+		nodeServiceClients: map[string]*grpc.ClientConn{},
 	}
 
 	if err := os.MkdirAll(controller.runPath, 0755); err != nil {
@@ -116,13 +122,24 @@ func New() *Controller {
 			if err != nil {
 				return nil, err
 			}
-
 			return handler(ctx, req)
 		},
 	)
 
 	csi.RegisterIdentityServer(controller.Server, controller)
 	csi.RegisterControllerServer(controller.Server, controller)
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	go func() {
+		_ = <-sigc
+		controller.Stop()
+	}()
 
 	return controller
 }
@@ -298,4 +315,55 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 	}
 
 	return nil
+}
+
+// Makes an RPC call to the specified node to retrieve initiators of the specified type (iSCSI,FC,SAS)
+// Handles re-use of the relatively expensive grpc Channel(grpc.ClientConn)
+// The gRPC stub is created and destroyed on each call
+func (controller *Controller) GetNodeInitiators(nodeAddress string, protocol string) ([]string, error) {
+	var reqType pb.InitiatorType
+	switch protocol {
+	case common.StorageProtocolSAS:
+		reqType = pb.InitiatorType_SAS
+	case common.StorageProtocolFC:
+		reqType = pb.InitiatorType_FC
+	case common.StorageProtocolISCSI:
+		reqType = pb.InitiatorType_ISCSI
+	}
+
+	clientConnection := controller.nodeServiceClients[nodeAddress]
+	if clientConnection == nil {
+		klog.V(3).InfoS("node grpc client not found, establishing...", "nodeAddress", nodeAddress)
+		var err error
+		clientConnection, err = node_service.InitializeClient(nodeAddress)
+		if err != nil {
+			return nil, err
+		}
+		controller.nodeServiceClients[nodeAddress] = clientConnection
+	}
+	initiators, err := node_service.GetNodeInitiators(clientConnection, reqType)
+	return initiators, err
+}
+
+func (controller *Controller) NotifyUnmap(nodeAddress string, volumeName string) error {
+	clientConnection := controller.nodeServiceClients[nodeAddress]
+	if clientConnection == nil {
+		klog.V(3).InfoS("node grpc client not found, establishing...", "nodeAddress", nodeAddress)
+		var err error
+		clientConnection, err = node_service.InitializeClient(nodeAddress)
+		if err != nil {
+			return err
+		}
+		controller.nodeServiceClients[nodeAddress] = clientConnection
+	}
+	return node_service.NotifyUnmap(clientConnection, volumeName)
+}
+
+// Graceful shutdown of Node-Controller RPC Clients
+func (controller *Controller) Stop() {
+	klog.V(3).InfoS("Controller code graceful shutdown..")
+	for nodeIP, clientConn := range controller.nodeServiceClients {
+		klog.V(3).InfoS("Closing node client", "nodeIP", nodeIP)
+		clientConn.Close()
+	}
 }

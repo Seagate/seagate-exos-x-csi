@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
-	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
 	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
@@ -38,7 +37,7 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 		reqType = pb.InitiatorType_ISCSI
 	}
 
-	initiators, err := node_service.GetNodeInitiators(nodeIP, reqType)
+	initiators, err := driver.GetNodeInitiators(nodeIP, parameters[common.StorageProtocolKey])
 	if err != nil {
 		klog.ErrorS(err, "error getting node initiators", "node-ip", nodeIP, "storage-protocol", reqType)
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Could not retrieve initiators for scheduled node(%s)", nodeIP))
@@ -76,19 +75,9 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 		return nil, err
 	}
 
-	var reqType pb.InitiatorType
-	switch storageProtocol {
-	case common.StorageProtocolSAS:
-		reqType = pb.InitiatorType_SAS
-	case common.StorageProtocolFC:
-		reqType = pb.InitiatorType_FC
-	case common.StorageProtocolISCSI:
-		reqType = pb.InitiatorType_ISCSI
-	}
-
-	initiators, err = node_service.GetNodeInitiators(nodeIP, reqType)
+	initiators, err = driver.GetNodeInitiators(nodeIP, storageProtocol)
 	if err != nil {
-		klog.ErrorS(err, "error getting initiators from the node", "nodeIP", nodeIP, "storage-protocol", reqType)
+		klog.ErrorS(err, "error getting initiators from the node", "nodeIP", nodeIP, "storageProtocol", storageProtocol)
 	}
 
 	klog.InfoS("unmapping volume from initiator", "volumeName", volumeName, "initiators", initiators)
@@ -100,6 +89,8 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 			} else {
 				klog.Errorf("unknown error while unmapping initiator %s: %v", initiator, err)
 			}
+		} else {
+			driver.NotifyUnmap(nodeIP, volumeName)
 		}
 	}
 
