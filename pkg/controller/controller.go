@@ -320,7 +320,7 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 // Makes an RPC call to the specified node to retrieve initiators of the specified type (iSCSI,FC,SAS)
 // Handles re-use of the relatively expensive grpc Channel(grpc.ClientConn)
 // The gRPC stub is created and destroyed on each call
-func (controller *Controller) GetNodeInitiators(nodeAddress string, protocol string) ([]string, error) {
+func (controller *Controller) GetNodeInitiators(ctx context.Context, nodeAddress string, protocol string) ([]string, error) {
 	var reqType pb.InitiatorType
 	switch protocol {
 	case common.StorageProtocolSAS:
@@ -341,11 +341,11 @@ func (controller *Controller) GetNodeInitiators(nodeAddress string, protocol str
 		}
 		controller.nodeServiceClients[nodeAddress] = clientConnection
 	}
-	initiators, err := node_service.GetNodeInitiators(clientConnection, reqType)
+	initiators, err := node_service.GetNodeInitiators(ctx, clientConnection, reqType)
 	return initiators, err
 }
 
-func (controller *Controller) NotifyUnmap(nodeAddress string, volumeName string) error {
+func (controller *Controller) NotifyUnmap(ctx context.Context, nodeAddress string, volumeName string) error {
 	clientConnection := controller.nodeServiceClients[nodeAddress]
 	if clientConnection == nil {
 		klog.V(3).InfoS("node grpc client not found, establishing...", "nodeAddress", nodeAddress)
@@ -356,7 +356,7 @@ func (controller *Controller) NotifyUnmap(nodeAddress string, volumeName string)
 		}
 		controller.nodeServiceClients[nodeAddress] = clientConnection
 	}
-	return node_service.NotifyUnmap(clientConnection, volumeName)
+	return node_service.NotifyUnmap(ctx, clientConnection, volumeName)
 }
 
 // Graceful shutdown of Node-Controller RPC Clients
@@ -366,4 +366,5 @@ func (controller *Controller) Stop() {
 		klog.V(3).InfoS("Closing node client", "nodeIP", nodeIP)
 		clientConn.Close()
 	}
+	controller.Driver.Stop()
 }

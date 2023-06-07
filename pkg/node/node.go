@@ -1,12 +1,12 @@
 package node
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
+	"os/signal"
+	"syscall"
 
 	"github.com/Seagate/csi-lib-iscsi/iscsi"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -114,8 +114,21 @@ func New() *Node {
 	csi.RegisterIdentityServer(node.Server, node)
 	csi.RegisterNodeServer(node.Server, node)
 
-	// initialize node communication service
-	go node_service.ListenAndServe(envServicePort)
+	// initialize node-controller communication service
+	node.nodeServer = grpc.NewServer()
+	go node_service.ListenAndServe(node.nodeServer, envServicePort)
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	go func() {
+		_ = <-sigc
+		node.Stop()
+	}()
 
 	return node
 }
@@ -252,8 +265,9 @@ func (node *Node) getConnectorInfoPath(storageProtocol, volumeID string) string 
 
 // Graceful shutdown of the node-controller RPC server
 func (node *Node) Stop() {
-	klog.V(3).InfoS("Controller code graceful shutdown..")
+	klog.V(3).InfoS("Node graceful shutdown..")
 	node.nodeServer.GracefulStop()
+	node.Driver.Stop()
 }
 
 // checkHostBinary: Determine if a binary image is installed or not
@@ -265,31 +279,4 @@ func checkHostBinary(name string) error {
 	}
 
 	return nil
-}
-
-// readInitiatorName: Extract the initiator name from /etc/iscsi file
-func readInitiatorName() (string, error) {
-
-	initiatorNameFilePath := "/etc/iscsi/initiatorname.iscsi"
-	file, err := os.Open(initiatorNameFilePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if equal := strings.Index(line, "="); equal >= 0 {
-			if strings.TrimSpace(line[:equal]) == "InitiatorName" {
-				return strings.TrimSpace(line[equal+1:]), nil
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	return "", fmt.Errorf("InitiatorName key is missing from %s", initiatorNameFilePath)
 }

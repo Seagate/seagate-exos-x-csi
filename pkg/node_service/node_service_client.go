@@ -28,10 +28,10 @@ func InitializeClient(nodeAddress string) (conn *grpc.ClientConn, err error) {
 }
 
 // Connect to the node_service gRPC server at the given address and retrieve initiators
-func GetNodeInitiators(conn *grpc.ClientConn, reqType pb.InitiatorType) ([]string, error) {
+func GetNodeInitiators(ctx context.Context, conn *grpc.ClientConn, reqType pb.InitiatorType) ([]string, error) {
 	client := pb.NewNodeServiceClient(conn)
 	initiatorReq := pb.InitiatorRequest{Type: reqType}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	initiators, err := client.GetInitiators(ctx, &initiatorReq)
 	if err != nil {
@@ -41,14 +41,14 @@ func GetNodeInitiators(conn *grpc.ClientConn, reqType pb.InitiatorType) ([]strin
 	return initiators.Initiators, nil
 }
 
-func NotifyUnmap(conn *grpc.ClientConn, volumeName string) (err error) {
+func NotifyUnmap(ctx context.Context, conn *grpc.ClientConn, volumeName string) (err error) {
 	client := pb.NewNodeServiceClient(conn)
 	unmappedVolumePb := pb.UnmappedVolume{VolumeName: volumeName}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	_, err = client.NotifyUnmap(ctx, &unmappedVolumePb)
 	if err != nil {
-		klog.InfoS("Error during unmap notification", "unmappedVolumeName", volumeName)
+		klog.ErrorS(err, "Error during unmap notification", "unmappedVolumeName", volumeName)
 	}
 	return
 }

@@ -3,8 +3,6 @@ package common
 import (
 	"context"
 	"net"
-	"os"
-	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
@@ -171,18 +169,6 @@ func (driver *Driver) Start(bind string) {
 		klog.Fatal(err)
 	}
 	driver.socket = socket
-
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	go func() {
-		_ = <-sigc
-		driver.Stop()
-	}()
 
 	go func() {
 		driver.exporter.ListenAndServe()

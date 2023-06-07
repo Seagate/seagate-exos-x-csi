@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
-	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,19 +26,9 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 	nodeIP := req.GetNodeId()
 	parameters := req.GetVolumeContext()
 
-	var reqType pb.InitiatorType
-	switch parameters[common.StorageProtocolKey] {
-	case common.StorageProtocolSAS:
-		reqType = pb.InitiatorType_SAS
-	case common.StorageProtocolFC:
-		reqType = pb.InitiatorType_FC
-	case common.StorageProtocolISCSI:
-		reqType = pb.InitiatorType_ISCSI
-	}
-
-	initiators, err := driver.GetNodeInitiators(nodeIP, parameters[common.StorageProtocolKey])
+	initiators, err := driver.GetNodeInitiators(ctx, nodeIP, parameters[common.StorageProtocolKey])
 	if err != nil {
-		klog.ErrorS(err, "error getting node initiators", "node-ip", nodeIP, "storage-protocol", reqType)
+		klog.ErrorS(err, "error getting node initiators", "node-ip", nodeIP, "storage-protocol", parameters[common.StorageProtocolKey])
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Could not retrieve initiators for scheduled node(%s)", nodeIP))
 	}
 
@@ -65,9 +54,6 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 	}
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-
-	var initiators []string
-
 	nodeIP := req.GetNodeId()
 	storageProtocol, err := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 	if err != nil {
@@ -75,7 +61,7 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 		return nil, err
 	}
 
-	initiators, err = driver.GetNodeInitiators(nodeIP, storageProtocol)
+	initiators, err := driver.GetNodeInitiators(ctx, nodeIP, storageProtocol)
 	if err != nil {
 		klog.ErrorS(err, "error getting initiators from the node", "nodeIP", nodeIP, "storageProtocol", storageProtocol)
 	}
@@ -90,7 +76,7 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 				klog.Errorf("unknown error while unmapping initiator %s: %v", initiator, err)
 			}
 		} else {
-			driver.NotifyUnmap(nodeIP, volumeName)
+			driver.NotifyUnmap(ctx, nodeIP, volumeName)
 		}
 	}
 
