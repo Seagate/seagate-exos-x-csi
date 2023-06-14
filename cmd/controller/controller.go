@@ -16,5 +16,7 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 	klog.Infof("starting storage controller (%s)", common.Version)
-	controller.New().Start(*bind)
+	c := controller.New()
+	defer c.Stop()
+	c.Start(*bind)
 }

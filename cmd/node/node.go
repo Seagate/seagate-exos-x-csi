@@ -25,5 +25,7 @@ func main() {
 	}
 
 	klog.Infof("starting storage node plugin (%s)", common.Version)
-	node.New().Start(*bind)
+	n := node.New()
+	defer n.Stop()
+	n.Start(*bind)
 }

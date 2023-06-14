@@ -152,7 +152,7 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 	klog.Infof("attached device at %s", path)
 
 	// if current wwn has been published before, remove it from our list of previously unpublished wwns
-	delete(globalRemovedDevicesMap, wwn)
+	delete(GlobalRemovedDevicesMap, wwn)
 	// check if previously unpublished devices were rediscovered by the scsi subsystem during Attach
 	checkPreviouslyRemovedDevices(ctx)
 
@@ -308,7 +308,7 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 	klog.Infof("deleting SAS connection info file %s", sas.connectorInfoPath)
 	os.Remove(sas.connectorInfoPath)
 
-	globalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
+	GlobalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
 
 	klog.Info("successfully detached SAS device")
 	return &csi.NodeUnpublishVolumeResponse{}, nil
@@ -316,7 +316,7 @@ func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnp
 
 func checkPreviouslyRemovedDevices(ctx context.Context) error {
 	klog.Info("Checking previously removed devices")
-	for wwn := range globalRemovedDevicesMap {
+	for wwn := range GlobalRemovedDevicesMap {
 		klog.Infof("Checking for rediscovery of wwn:%s", wwn)
 
 		dm, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, &saslib.OSioHandler{})

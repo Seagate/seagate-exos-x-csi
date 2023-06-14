@@ -62,7 +62,7 @@ type sasStorage struct {
 }
 
 // Map of device WWNs to timestamp of when they were unpublished from the node
-var globalRemovedDevicesMap = map[string]time.Time{}
+var GlobalRemovedDevicesMap = map[string]time.Time{}
 
 // buildCommonService:
 func buildCommonService(config map[string]string) (commonService, error) {
