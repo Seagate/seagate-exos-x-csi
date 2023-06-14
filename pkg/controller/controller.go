@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/exosx"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/v1"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
