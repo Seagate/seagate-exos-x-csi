@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
-	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/exosx"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/v1"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
@@ -127,11 +127,15 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 					return nil, err2
 				}
 			}
+			wwn, _ = controller.client.GetVolumeWwn(volumeName)
 
 		} else {
-			_, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
+			volume, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
 			if err2 != nil {
 				return nil, err
+			}
+			if volume != nil {
+				wwn = volume.Wwn
 			}
 		}
 	}
@@ -151,7 +155,6 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		klog.V(2).Infof("Storing iSCSI iqn: %s, portals: %v", targetId, portals)
 	}
 
-	wwn, _ = controller.client.GetVolumeWwn(volumeName)
 	volumeId := common.VolumeIdAugment(volumeName, storageProtocol, wwn)
 
 	volume := &csi.CreateVolumeResponse{
