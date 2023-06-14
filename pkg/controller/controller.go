@@ -246,12 +246,12 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.APIAddressConfigKey))
 	}
 
-	klog.Infof("using API at address (%s)", apiAddr)
+	klog.InfoS("using API", "address", apiAddr)
 	if controller.client.SessionValid(apiAddr, username) {
 		return nil
 	}
 
-	klog.Infof("login to API address %q as user %q", apiAddr, username)
+	klog.InfoS("login to API", "address", apiAddr, "username", username)
 	controller.client.StoreCredentials(apiAddr, username, password)
 	err := controller.client.Login()
 	if err != nil {
