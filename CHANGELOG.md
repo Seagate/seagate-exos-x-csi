@@ -1,3 +1,22 @@
+# [1.7.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.3...v1.7.0) (2023-06-26)
+
+### Bug Fixes
+
+- default to iSCSI if no initiator type specified ([71c7426](https://github.com/Seagate/seagate-exos-x-csi/commit/71c74260796092fe3224a390e16531f87ab7a3e8))
+
+### Features
+
+- release v1.7.0 ([ffdb0c5](https://github.com/Seagate/seagate-exos-x-csi/commit/ffdb0c50f5a169da94ca85cc0a0226e85e6cd644))
+
+### Other
+
+- HS-306/invalid node return code (#86) ([32d05a5](https://github.com/Seagate/seagate-exos-x-csi/commit/32d05a5b7fa981b56198a4eff388482322df93a1)), closes [#86](https://github.com/Seagate/seagate-exos-x-csi/issues/86)
+- certification automation, Helm chart formatting compatible with yq, and README updates ([2b44525](https://github.com/Seagate/seagate-exos-x-csi/commit/2b44525c0ca8d02df706ca24c09fa0a2369edbca))
+
+### Performance
+
+- Update node-controller rpc service to notify nodes on volume unmap (#87) ([55d7d6a](https://github.com/Seagate/seagate-exos-x-csi/commit/55d7d6af0339b05da38271cdbb13d76ac91c5aa5)), closes [#87](https://github.com/Seagate/seagate-exos-x-csi/issues/87)
+
 ## [1.6.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.2...v1.6.3) (2023-04-25)
 
 ### Build System
