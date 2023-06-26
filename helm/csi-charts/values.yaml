@@ -11,7 +11,7 @@ image:
   repository: ghcr.io/seagate/seagate-exos-x-csi
   # -- Tag to use for nodes and controller
   # @default -- Uses Chart.appVersion value by default if tag does not specify a new version.
-  tag: "v1.6.3"
+  tag: "v1.7.0"
   # -- Default is set to IfNotPresent, to override use Always here to always pull the specified version
   pullPolicy: Always
 # -- Controller sidecar for provisioning
