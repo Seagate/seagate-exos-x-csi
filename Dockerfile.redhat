@@ -4,11 +4,12 @@
 # line, or for args to be updated in this file prior to building.  See
 # the ARG section below.
 
-FROM docker.io/library/golang AS build
+FROM redhat/ubi8:8.8 AS build
 
 RUN printenv
-RUN go version
-RUN apt update && apt install -y make git
+RUN yum update -y 
+RUN yum module install go-toolset -y
+RUN yum install make git -y
 
 WORKDIR /app
 COPY ./go.* ./
@@ -16,7 +17,7 @@ COPY cmd cmd
 COPY pkg pkg
 COPY Makefile ./
 
-RUN echo "package common\nconst Version = \"${version}\"" > ./pkg/common/version.go
+RUN echo -e "package common\nconst Version = \"${version}\"" > ./pkg/common/version.go
 
 RUN make controller node; cp seagate-exos-x-csi-controller seagate-exos-x-csi-node /
 
@@ -24,11 +25,11 @@ RUN ls -l /
 
 ########################################################################
 
-FROM redhat/ubi8
+FROM redhat/ubi8:8.8
 
-ARG version=v1.5.3
-ARG vcs_ref=20001b82bf9ca5b63f15ec74f4e29ed2f36671c3
-ARG build_date=2023-01-20T20:35:00+00:00
+ARG version=ubi8-2
+ARG vcs_ref=5fd7947b9beb1df3c115216c014b7c60b9ff5947
+ARG build_date=2023-06-27T20:39:34+00:00
 ARG vendor=Seagate
 ARG family="Exos X"
 ARG app="${family} CSI Driver"
