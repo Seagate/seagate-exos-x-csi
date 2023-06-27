@@ -251,9 +251,8 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return nil
 	}
 
-	protocol := "http"
-	klog.InfoS("login to API", "address", apiAddr, "protocol", protocol, "username", username)
-	controller.client.StoreCredentials(apiAddr, protocol, username, password)
+	klog.InfoS("login to API", "address", apiAddr, "username", username)
+	controller.client.StoreCredentials(apiAddr, "", username, password)
 	err := controller.client.Login()
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
