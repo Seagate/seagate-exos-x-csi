@@ -1,3 +1,13 @@
+## [1.7.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.7.1...v1.7.2) (2023-06-28)
+
+### Bug Fixes
+
+- Release 1.7.2 ([03adae4](https://github.com/Seagate/seagate-exos-x-csi/commit/03adae480f254f1d354a26ef607002ca15b06ca5))
+
+### Build System
+
+- specify registry url for ubi base image ([e1a22fe](https://github.com/Seagate/seagate-exos-x-csi/commit/e1a22fe8f2b69c9c14a5e11eec90e2f83af25ded))
+
 ## [1.7.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.7.0...v1.7.1) (2023-06-28)
 
 ### Bug Fixes
