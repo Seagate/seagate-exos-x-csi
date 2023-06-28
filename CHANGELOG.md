@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.7.0...v1.7.1) (2023-06-28)
+
+### Bug Fixes
+
+- Update build to resolve glibc mismatch on certain platforms ([f57088f](https://github.com/Seagate/seagate-exos-x-csi/commit/f57088f1cba483f0d9eba24a977ac52be75af39e))
+
 # [1.7.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.6.3...v1.7.0) (2023-06-26)
 
 ### Bug Fixes
