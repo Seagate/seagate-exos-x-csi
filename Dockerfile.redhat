@@ -4,14 +4,15 @@
 # line, or for args to be updated in this file prior to building.  See
 # the ARG section below.
 
-FROM redhat/ubi8:8.8 AS build
+FROM ubi7/go-toolset:1.19 AS build
 
+USER root
+ENV PATH="${PATH}:/opt/rh/go-toolset-1.19/root/usr/bin/"
 RUN printenv
-RUN yum update -y 
-RUN yum module install go-toolset -y
-RUN yum install make git -y
+RUN echo "glibc build image info:" && ldd --version
+RUN go version
 
-WORKDIR /app
+#WORKDIR /app
 COPY ./go.* ./
 COPY cmd cmd
 COPY pkg pkg
@@ -25,11 +26,11 @@ RUN ls -l /
 
 ########################################################################
 
-FROM redhat/ubi8:8.8
+FROM ubi7/go-toolset:1.19
 
-ARG version=ubi8-2
-ARG vcs_ref=5fd7947b9beb1df3c115216c014b7c60b9ff5947
-ARG build_date=2023-06-27T20:39:34+00:00
+ARG version=v1.7.1
+ARG vcs_ref=89c5c4558d77735c53f25d44789938f6dc609e62
+ARG build_date=2023-06-28T00:45:11+00:00
 ARG vendor=Seagate
 ARG family="Exos X"
 ARG app="${family} CSI Driver"
@@ -64,8 +65,9 @@ LABEL name="${app}" \
       io.k8s.display-name="${app}" \
       io.k8s.description="${description}"
 
+USER root
 RUN yum update -y && \
-    yum -y install iscsi-initiator-utils kmod && \
+    yum -y install iscsi-initiator-utils && \
     yum clean all && \
     rm -rf /var/cache
 

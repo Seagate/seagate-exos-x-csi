@@ -1,4 +1,4 @@
-.PHONY: help all bin controller node test image limage ubi openshift push clean
+.PHONY: help all bin controller node test openshift push clean
 
 VENDOR := seagate
 GITHUB_ORG := Seagate
@@ -43,24 +43,21 @@ help:
 	@echo ""
 	@echo "Build Targets:"
 	@echo "-----------------------------------------------------------------------------------"
-	@echo "make all          - clean, create driver images, create ubi docker image, push to registry"
-	@echo "make bin          - create controller and node driver images"
+	@echo "make all          - clean, build openshift docker image, push to registry"
+	@echo "make bin          - create controller and node driver binaries"
 	@echo "make clean        - remove '$(BIN)-controller' and '$(BIN)-node'"
 	@echo "make controller   - create controller driver image ($(BIN)-controller)"
 	@echo "make helm-package - create signed helm package using HELM_VERSION, HELM_KEY environment variables"
-	@echo "make image        - create a repo docker image ($(IMAGE))"
-	@echo "make limage       - create a local docker image ($(IMAGE))"
 	@echo "make node         - create node driver image ($(BIN)-node)"
 	@echo "make openshift    - Create OpenShift-certification candidate image ($(IMAGE))"
 	@echo "make push         - push the docker image to '$(DOCKER_HUB_REPOSITORY)'"
 	@echo "make test         - build test/sanity"
-	@echo "make ubi          - create a local docker image using Redhat UBI ($(IMAGE))"
 	@echo ""
 
-all: clean bin openshift push
-openshift-all: clean openshift push
+all: clean openshift push
 
-bin: protoc controller node
+bin: controller node
+
 
 protoc: 
 	@echo ""
@@ -81,22 +78,6 @@ test:
 	@echo ""
 	@echo "[] test"
 	./test/sanity
-
-image:
-	@echo ""
-	@echo "[] image"
-	docker build -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
-
-limage:
-	@echo ""
-	@echo "[] limage"
-	docker build -f Dockerfile.local -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
-
-ubi:
-	@echo ""
-	@echo "[] ubi"
-	docker build -f Dockerfile.ubi -t $(IMAGE) --build-arg version="$(VERSION)" --build-arg vcs_ref="$(shell git rev-parse HEAD)" --build-arg build_date="$(shell date --rfc-3339=seconds)" .
-
 
 push:
 	@echo ""
