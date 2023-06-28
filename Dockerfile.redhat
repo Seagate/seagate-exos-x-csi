@@ -4,7 +4,7 @@
 # line, or for args to be updated in this file prior to building.  See
 # the ARG section below.
 
-FROM ubi7/go-toolset:1.19 AS build
+FROM registry.access.redhat.com/ubi7/go-toolset:1.19 AS build
 
 USER root
 ENV PATH="${PATH}:/opt/rh/go-toolset-1.19/root/usr/bin/"
@@ -26,9 +26,9 @@ RUN ls -l /
 
 ########################################################################
 
-FROM ubi7/go-toolset:1.19
+FROM registry.access.redhat.com/ubi7/go-toolset:1.19
 
-ARG version=v1.7.1
+ARG version=v1.7.2
 ARG vcs_ref=89c5c4558d77735c53f25d44789938f6dc609e62
 ARG build_date=2023-06-28T00:45:11+00:00
 ARG vendor=Seagate
