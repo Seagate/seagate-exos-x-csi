@@ -11,21 +11,12 @@ env:
 
 jobs:
   build-and-push-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Install protocol buffers compiler
-        run: |
-          wget https://github.com/protocolbuffers/protobuf/releases/download/v22.3/protoc-22.3-linux-x86_64.zip
-          unzip protoc-22.3-linux-x86_64.zip -d $HOME/.local
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-          echo "$PATH:$(go env GOPATH)/bin" >> $GITHUB_PATH
-          echo "protoc version installed: " $(protoc --version)
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -50,12 +41,6 @@ jobs:
         run: |
           echo "released version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
           echo "image name is ${{ steps.imagelc.outputs.lowercase }}"
-
-      - name: Build driver images
-        run: |
-          echo "released version is ${{ steps.fetch-latest-release.outputs.latest-release }}"
-          export VERSION=${{ steps.fetch-latest-release.outputs.latest-release }}
-          make bin
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
