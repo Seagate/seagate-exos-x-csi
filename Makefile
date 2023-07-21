@@ -20,7 +20,7 @@ endif
 ifdef VERSION
 VERSION := $(VERSION)
 else
-VERSION := v1.7.2
+VERSION := v1.7.3
 endif
 HELM_VERSION := $(subst v,,$(VERSION))
 VERSION_FLAG = -X $(GITHUB_URL)/pkg/common.Version=$(VERSION)
@@ -129,22 +129,27 @@ REDHAT_IMAGE=$(REDHAT_IMAGE_BASE):$(VERSION)
 REDHAT_IMAGE_LATEST=$(REDHAT_IMAGE_BASE):latest
 PREFLIGHT_OPTIONS=
 PREFLIGHT_SUBMIT=
+PFLT_DOCKERCONFIG=.preflight-auth.json
 
-preflight:
+preflight: $(PFLT_DOCKERCONFIG)
 	-docker run -d -p 5000:5000 --name registry registry:2 # make sure local registry is running
 	docker tag $(IMAGE) $(PREFLIGHT_IMAGE)
 	docker push $(PREFLIGHT_IMAGE)
-	$(PREFLIGHT) check container $(PREFLIGHT_SUBMIT) $(PREFLIGHT_OPTIONS) $(PREFLIGHT_IMAGE) \
-		PFLT_DOCKERCONFIG=$(PFLT_DOCKERCONFIG)
-
+	PFLT_DOCKERCONFIG=$(PFLT_DOCKERCONFIG) $(PREFLIGHT) check container $(PREFLIGHT_SUBMIT) $(PREFLIGHT_OPTIONS) $(PREFLIGHT_IMAGE)
+		
 preflight-submit: .preflight-auth.json
 	$(MAKE) preflight PREFLIGHT_SUBMIT="--submit" \
 		PREFLIGHT_OPTIONS="--pyxis-api-token=$(PYXIS_API_TOKEN) --certification-project-id=$(REDHAT_PROJECT_ID)" \
-		PREFLIGHT_IMAGE=$(REDHAT_IMAGE) PFLT_DOCKERCONFIG=.preflight-auth.json
+		PREFLIGHT_IMAGE=$(REDHAT_IMAGE) PFLT_DOCKERCONFIG=$(PFLT_DOCKERCONFIG)
 
 tag-latest:
 	podman tag $(REDHAT_IMAGE) $(REDHAT_IMAGE_LATEST)
 	podman push $(REDHAT_IMAGE_LATEST)
+
+preflight-push:
+	podman login -u redhat-isv-containers+$(REDHAT_PROJECT_ID)-robot -p $(REGISTRY_KEY) quay.io
+	podman tag $(IMAGE) $(REDHAT_IMAGE)
+	podman push $(REDHAT_IMAGE)
 
 .preflight-auth.json:
 	podman login -u redhat-isv-containers+610494ea40182fa9651cdab0-robot -p $(REGISTRY_KEY) --authfile "$@" quay.io
