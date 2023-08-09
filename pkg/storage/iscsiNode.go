@@ -106,11 +106,39 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 			}
 		}
 	}
+
+	// If CHAP secrets have been specified, include them in the iscsilib Connector
+	doCHAPAuth := false
+	authType := ""
+	var iscsiSecrets iscsilib.Secrets
+	if reqSecrets := req.GetSecrets(); reqSecrets != nil {
+		CHAPusername := reqSecrets[common.CHAPUsernameKey]
+		CHAPpassword := reqSecrets[common.CHAPSecretKey]
+		CHAPusernameIn := reqSecrets[common.CHAPUsernameInKey]
+		CHAPpasswordIn := reqSecrets[common.CHAPPasswordInKey]
+		if CHAPusername != "" && CHAPpassword != "" {
+			doCHAPAuth = true
+			authType = "chap"
+			iscsiSecrets = iscsilib.Secrets{
+				SecretsType: "chap",
+				UserName:    CHAPusername,
+				Password:    CHAPpassword,
+				UserNameIn:  CHAPusernameIn,
+				PasswordIn:  CHAPpasswordIn,
+			}
+		}
+	}
+
+	klog.V(4).InfoS("iscsi connector setup", "AuthType", authType, "Targets", targets, "Lun", lun)
 	connector := iscsilib.Connector{
-		Targets:     targets,
-		Lun:         int32(lun),
-		DoDiscovery: true,
-		RetryCount:  20,
+		AuthType:         authType,
+		Targets:          targets,
+		Lun:              int32(lun),
+		DoDiscovery:      true,
+		DoCHAPDiscovery:  doCHAPAuth,
+		DiscoverySecrets: iscsiSecrets,
+		SessionSecrets:   iscsiSecrets,
+		RetryCount:       20,
 	}
 
 	path, err := iscsilib.Connect(&connector)
