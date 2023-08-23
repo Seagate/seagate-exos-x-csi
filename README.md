@@ -5,7 +5,7 @@ The Seagate Exos X CSI Driver supports the following storage arrays
 - Seagate Exos X and AssuredSAN (4006/5005/4005/3005)
 - Dell PowerVault ME4 and ME5 Series
 
-iSCSI, SAS, and FC host interfaces are supported.
+iSCSI, SAS, and FC host interfaces are supported for both block and filesystem mount types
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seagate/seagate-exos-x-csi)](https://goreportcard.com/report/github.com/Seagate/seagate-exos-x-csi)
 
@@ -31,7 +31,7 @@ This project implements the **Container Storage Interface** in order to facilita
 This CSI driver is an open-source project under the Apache 2.0 [license](./LICENSE).
 
 ## Key Features
-- Manage persistent volumes backed by iSCSI protocols on Exos X enclosures
+- Manage persistent volumes on Exos X enclosures
 - Control multiple Exos X systems within a single Kubernetes cluster
 - Manage Exos X snapshots and clones, including restoring from snapshots
 - Clone, extend and manage persistent volumes created outside of the Exos CSI Driver
