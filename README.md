@@ -113,8 +113,8 @@ oc adm policy add-scc-to-user exos-x-csi-access -z csi-provisioner -n NAMESPACE
 #### Configure your release
 
 - Update `helm/csi-charts/values.yaml` to match your configuration settings.
-- Update `example/secret-example1.yaml` with your storage controller credentials.
-- Update `example/storageclass-example1.yaml` with your storage controller values.
+- Update `example/secret-example1.yaml` with your storage controller credentials. Use `example/secret-example2-CHAP.yaml` if you wish to specify CHAP credentials as well. 
+- Update `example/storageclass-example1.yaml` with your storage controller values. Use `example/storageclass-example2-CHAP.yaml` if you are using CHAP authentication
 - Update `example/testpod-example1.yaml` with any of you new values.
 
 ## Documentation

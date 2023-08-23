@@ -26,11 +26,11 @@ RUN ls -l /
 
 ########################################################################
 
-FROM registry.access.redhat.com/ubi7/go-toolset:1.19
+FROM registry.access.redhat.com/ubi7
 
-ARG version=v1.7.2
-ARG vcs_ref=89c5c4558d77735c53f25d44789938f6dc609e62
-ARG build_date=2023-06-28T00:45:11+00:00
+ARG version=v1.7.3
+ARG vcs_ref=f64a389bd19c45ff31ce5026ea28f7ad3e954723
+ARG build_date=2023-07-20T14:37:39+00:00
 ARG vendor=Seagate
 ARG family="Exos X"
 ARG app="${family} CSI Driver"
