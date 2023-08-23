@@ -52,119 +52,22 @@ func (fc *fcStorage) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstage
 	return nil, status.Error(codes.Unimplemented, "NodeUnstageVolume is not implemented")
 }
 
-// NodePublishVolume mounts the volume mounted to the staging path to the target path
-func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume with empty id")
-	}
-	if len(req.GetTargetPath()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume at an empty path")
-	}
-	if req.GetVolumeCapability() == nil {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
-	}
-
-	if req.GetVolumeCapability().GetBlock() != nil &&
-		req.GetVolumeCapability().GetMount() != nil {
-		return nil, status.Error(codes.InvalidArgument, "cannot have both block and mount access type")
-	}
-	if req.GetVolumeCapability().GetBlock() == nil &&
-		req.GetVolumeCapability().GetMount() == nil {
-		return nil, status.Error(codes.InvalidArgument, "volume access type not specified, must be either block or mount")
-	}
-
-	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
-	lun, _ := req.GetPublishContext()["lun"]
-
-	// Ensure that NodePublishVolume is only called once per volume
-	AddGatekeeper(volumeName)
-	defer RemoveGatekeeper(volumeName)
-
-	klog.V(1).InfoS("[START] publishing volume", "volumeName", volumeName, "wwn", wwn, "targetPath", req.GetTargetPath(), "lun", lun)
-
-	// Initiate FC attachment
+func (fc *fcStorage) AttachStorage(ctx context.Context, req *csi.NodePublishVolumeRequest) (string, error) {
 	klog.InfoS("initiating FC connection...")
-	connector := fclib.Connector{VolumeWWN: wwn}
-	path, err := fclib.Attach(ctx, &connector, &fclib.OSioHandler{})
+	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
+	connector := &fclib.Connector{VolumeWWN: wwn}
+	path, err := fclib.Attach(ctx, connector, &fclib.OSioHandler{})
 	if err != nil {
-		return nil, status.Error(codes.Unavailable, err.Error())
+		return path, err
 	}
 	klog.InfoS("attached device", "path", path)
-
-	// if current wwn has been published before, remove it from our list of previously unpublished wwns
-	delete(GlobalRemovedDevicesMap, wwn)
-	// check if previously unpublished devices were rediscovered by the scsi subsystem during Attach
-	checkPreviouslyRemovedDevices(ctx)
-
-	if req.GetVolumeCapability().GetMount() != nil {
-		fsType := GetFsType(req)
-		err = EnsureFsType(fsType, path)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		corrupted := false
-		if err = CheckFs(path, fsType, "Publish"); err != nil {
-			corrupted = true
-		}
-
-		klog.InfoS("device multipath status", "multipath", connector.Multipath, "path", path, "wwn", wwn, "corrupted", corrupted)
-
-		if corrupted {
-			klog.InfoS("device corruption (publish)", "device", connector.OSPathName, "volume", volumeName, "multipath", connector.Multipath, " wwn", wwn, "corrupted", corrupted)
-			DebugCorruption("$$", path)
-			return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
-		}
-
-		out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
-		mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
-		if err != nil || len(mountpoints) == 0 {
-			klog.V(1).InfoS("mount", "command", fmt.Sprintf("mount -t %s %s %s", fsType, path, req.GetTargetPath()))
-			os.Mkdir(req.GetTargetPath(), 00755)
-			if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
-				klog.InfoS("targetpath does not exist", "targetPath", req.GetTargetPath())
-			}
-			out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
-			if err != nil {
-				return nil, status.Error(codes.Internal, string(out))
-			}
-		} else if len(mountpoints) == 1 {
-			if mountpoints[0] == req.GetTargetPath() {
-				klog.InfoS("volume already mounted", "targetPath", req.GetTargetPath())
-			} else {
-				errStr := fmt.Sprintf("device has already been mounted somewhere else (%s instead of %s), please unmount first", mountpoints[0], req.GetTargetPath())
-				return nil, status.Error(codes.Internal, errStr)
-			}
-		} else if len(mountpoints) > 1 {
-			return nil, errors.New("device has already been mounted in several locations, please unmount first")
-		}
-	} else if req.GetVolumeCapability().GetBlock() != nil {
-		deviceFile, err := os.Create(req.GetTargetPath())
-		if err != nil {
-			klog.ErrorS(err, "could not create file", "TargetPath", req.GetTargetPath())
-			return nil, err
-		}
-		deviceFile.Chmod(00755)
-		deviceFile.Close()
-		out, err := exec.Command("mount", "-o", "bind", path, req.GetTargetPath()).CombinedOutput()
-		if err != nil {
-			return nil, status.Error(codes.Internal, string(out))
-		}
-	}
-
-	klog.Infof("saving FC connection info in %s", fc.connectorInfoPath)
-	if _, err := os.Stat(fc.connectorInfoPath); err == nil {
-		klog.ErrorS(err, "fc connection file already exists", "connectorInfoPath", fc.connectorInfoPath)
-	}
 	err = connector.Persist(ctx, fc.connectorInfoPath)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	return path, err
+}
 
-	klog.InfoS("successfully mounted volume", "targetPath", req.GetTargetPath())
-	return &csi.NodePublishVolumeResponse{}, nil
-
+// NodePublishVolume mounts the volume mounted to the staging path to the target path
+func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "FC specific NodePublishVolume not implemented")
 }
 
 // NodeUnpublishVolume unmounts the volume from the target path

@@ -21,6 +21,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -29,6 +30,8 @@ import (
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 )
 
@@ -39,6 +42,7 @@ const (
 
 type StorageOperations interface {
 	csi.NodeServer
+	AttachStorage(ctx context.Context, req *csi.NodePublishVolumeRequest) (string, error)
 }
 
 type commonService struct {
@@ -221,6 +225,59 @@ func EnsureFsType(fsType string, disk string) error {
 		}
 	}
 
+	return nil
+}
+
+func MountFilesystem(req *csi.NodePublishVolumeRequest, path string) error {
+	fsType := GetFsType(req)
+	err := EnsureFsType(fsType, path)
+	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+
+	if err = CheckFs(path, fsType, "Publish"); err != nil {
+		return err
+	}
+
+	out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
+	mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
+	if err != nil || len(mountpoints) == 0 {
+		klog.V(1).InfoS("mount", "command", fmt.Sprintf("mount -t %s %s %s", fsType, path, req.GetTargetPath()))
+		os.Mkdir(req.GetTargetPath(), 00755)
+		if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			klog.InfoS("targetpath does not exist", "targetPath", req.GetTargetPath())
+		}
+		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
+		if err != nil {
+			return status.Error(codes.Internal, string(out))
+		}
+	} else if len(mountpoints) == 1 {
+		if mountpoints[0] == req.GetTargetPath() {
+			klog.InfoS("volume already mounted", "targetPath", req.GetTargetPath())
+		} else {
+			errStr := fmt.Sprintf("device has already been mounted somewhere else (%s instead of %s), please unmount first", mountpoints[0], req.GetTargetPath())
+			return status.Error(codes.Internal, errStr)
+		}
+	} else if len(mountpoints) > 1 {
+		return errors.New("device has already been mounted in several locations, please unmount first")
+	}
+
+	klog.InfoS("successfully mounted volume", "targetPath", req.GetTargetPath())
+	return nil
+}
+
+func MountDevice(req *csi.NodePublishVolumeRequest, path string) error {
+	deviceFile, err := os.Create(req.GetTargetPath())
+	if err != nil {
+		klog.ErrorS(err, "could not create file", "TargetPath", req.GetTargetPath())
+		return err
+	}
+	deviceFile.Chmod(00755)
+	deviceFile.Close()
+	out, err := exec.Command("mount", "-o", "bind", path, req.GetTargetPath()).CombinedOutput()
+	if err != nil {
+		return status.Error(codes.Internal, string(out))
+	}
 	return nil
 }
 

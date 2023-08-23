@@ -59,35 +59,8 @@ func (iscsi *iscsiStorage) NodeUnstageVolume(ctx context.Context, req *csi.NodeU
 	return nil, status.Error(codes.Unimplemented, "NodeUnstageVolume is not implemented")
 }
 
-// NodePublishVolume mounts the volume mounted to the staging path to the target path
-func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume with empty id")
-	}
-	if len(req.GetTargetPath()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume at an empty path")
-	}
-	if req.GetVolumeCapability() == nil {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
-	}
-	if req.GetVolumeCapability().GetBlock() != nil &&
-		req.GetVolumeCapability().GetMount() != nil {
-		return nil, status.Error(codes.InvalidArgument, "cannot have both block and mount access type")
-	}
-	if req.GetVolumeCapability().GetBlock() == nil &&
-		req.GetVolumeCapability().GetMount() == nil {
-		return nil, status.Error(codes.InvalidArgument, "volume access type not specified, must be either block or mount")
-	}
-
-	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+func (iscsi *iscsiStorage) AttachStorage(ctx context.Context, req *csi.NodePublishVolumeRequest) (string, error) {
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
-
-	// Ensure that NodePublishVolume is only called once per volume
-	AddGatekeeper(volumeName)
-	defer RemoveGatekeeper(volumeName)
-
-	klog.V(1).InfoS("[START] publishing volume", "volumeName", volumeName, "wwn", wwn, "targetPath", req.GetTargetPath())
-
 	iqn := req.GetVolumeContext()["iqn"]
 	portals := strings.Split(req.GetVolumeContext()["portals"], ",")
 	klog.InfoS("iSCSI connection info:", "iqn", iqn, "portals", portals)
@@ -149,9 +122,9 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 		RetryCount:       20,
 	}
 
-	path, err := iscsilib.Connect(&connector)
+	path, err := iscsilib.Connect(connector)
 	if err != nil {
-		return nil, status.Error(codes.Unavailable, err.Error())
+		return "", status.Error(codes.Unavailable, err.Error())
 	}
 	klog.InfoS("attached device:", "path", path)
 
@@ -180,75 +153,24 @@ func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodeP
 			attempts++
 		}
 	}
-
-	if req.GetVolumeCapability().GetMount() != nil {
-		fsType := GetFsType(req)
-		err = EnsureFsType(fsType, path)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		corrupted := false
-		if err = CheckFs(path, fsType, "Publish"); err != nil {
-			corrupted = true
-		}
-
-		klog.InfoS("device multipath status", "multipath", connector.Multipath, "path", path, "wwn", wwn, "exists", exists, "corrupted", corrupted)
-
-		if corrupted {
-			klog.InfoS("device corruption (publish)", "device", connector.DevicePath, "volume", volumeName, "multipath", connector.Multipath, " wwn", wwn, "exists", exists, "corrupted", corrupted)
-			DebugCorruption("$$", path)
-			return nil, status.Errorf(codes.DataLoss, "(publish) filesystem (%v) seems to be corrupted: %v", path, err)
-		}
-
-		out, err = exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
-		mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
-		if err != nil || len(mountpoints) == 0 {
-			klog.V(1).InfoS("mount", "command", fmt.Sprintf("mount -t %s %s %s", fsType, path, req.GetTargetPath()))
-			os.Mkdir(req.GetTargetPath(), 00755)
-			if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
-				klog.InfoS("targetpath does not exist", "targetPath", req.GetTargetPath())
-			}
-			out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
-			if err != nil {
-				return nil, status.Error(codes.Internal, string(out))
-			}
-		} else if len(mountpoints) == 1 {
-			if mountpoints[0] == req.GetTargetPath() {
-				klog.InfoS("volume already mounted", "targetPath", req.GetTargetPath())
-			} else {
-				errStr := fmt.Sprintf("device has already been mounted somewhere else (%s instead of %s), please unmount first", mountpoints[0], req.GetTargetPath())
-				return nil, status.Error(codes.Internal, errStr)
-			}
-		} else if len(mountpoints) > 1 {
-			return nil, errors.New("device has already been mounted in several locations, please unmount first")
-		}
-
-		klog.InfoS("successfully mounted volume", "targetPath", req.GetTargetPath())
-	} else if req.GetVolumeCapability().GetBlock() != nil {
-		deviceFile, err := os.Create(req.GetTargetPath())
-		if err != nil {
-			klog.ErrorS(err, "could not create file", "TargetPath", req.GetTargetPath())
-			return nil, err
-		}
-		deviceFile.Chmod(00755)
-		deviceFile.Close()
-		out, err = exec.Command("mount", "-o", "bind", path, req.GetTargetPath()).CombinedOutput()
-		if err != nil {
-			return nil, status.Error(codes.Internal, string(out))
-		}
+	if _, err := os.Stat(iscsi.connectorInfoPath); err == nil {
+		klog.InfoS("iscsi connection file already exists", "connectorInfoPath", iscsi.connectorInfoPath)
 	}
 
 	klog.InfoS("saving ISCSI connection info", "connectorInfoPath", iscsi.connectorInfoPath)
 	if _, err := os.Stat(iscsi.connectorInfoPath); err == nil {
 		klog.InfoS("iscsi connection file already exists", "connectorInfoPath", iscsi.connectorInfoPath)
 	}
-	err = iscsilib.PersistConnector(&connector, iscsi.connectorInfoPath)
+	err = iscsilib.PersistConnector(connector, iscsi.connectorInfoPath)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return path, status.Error(codes.Internal, err.Error())
 	}
 
-	return &csi.NodePublishVolumeResponse{}, nil
+	return path, err
+}
+
+func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "iscsi specific NodePublishVolume not implemented")
 }
 
 // NodeUnpublishVolume unmounts the volume from the target path
