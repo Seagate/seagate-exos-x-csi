@@ -43,6 +43,7 @@ const (
 type StorageOperations interface {
 	csi.NodeServer
 	AttachStorage(ctx context.Context, req *csi.NodePublishVolumeRequest) (string, error)
+	DetachStorage(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) error
 }
 
 type commonService struct {
@@ -277,6 +278,34 @@ func MountDevice(req *csi.NodePublishVolumeRequest, path string) error {
 	out, err := exec.Command("mount", "-o", "bind", path, req.GetTargetPath()).CombinedOutput()
 	if err != nil {
 		return status.Error(codes.Internal, string(out))
+	}
+	return nil
+}
+
+// Unmount a given path, usually req.GetVolumePath() from NodeUnpublishVolume
+// used for both block and filesystem mount types
+func Unmount(path string) error {
+	_, err := os.Stat(path)
+	if err == nil {
+		klog.InfoS("unmounting volume", "path", path)
+		klog.V(4).InfoS("mountpoint command", "command", "mountpoint "+path)
+		out, err := exec.Command("mountpoint", path).CombinedOutput()
+		if err == nil {
+			klog.V(4).InfoS("umount command", "command", "umount -l "+path)
+			out, err := exec.Command("umount", "-l", path).CombinedOutput()
+			if err != nil {
+				return status.Error(codes.Internal, string(out))
+			}
+		} else {
+			klog.ErrorS(err, "assuming that volume is already unmounted", "mountpoint_output", out)
+		}
+
+		err = os.Remove(path)
+		if err != nil && !os.IsNotExist(err) {
+			return status.Error(codes.Internal, err.Error())
+		}
+	} else {
+		klog.ErrorS(err, "assuming that volume is already unmounted")
 	}
 	return nil
 }

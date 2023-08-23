@@ -22,11 +22,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	fclib "github.com/Seagate/csi-lib-sas/sas"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -65,76 +65,34 @@ func (fc *fcStorage) AttachStorage(ctx context.Context, req *csi.NodePublishVolu
 	return path, err
 }
 
-// NodePublishVolume mounts the volume mounted to the staging path to the target path
-func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "FC specific NodePublishVolume not implemented")
-}
-
-// NodeUnpublishVolume unmounts the volume from the target path
-func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty volume id")
-	}
-	if len(req.GetTargetPath()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty target path")
-	}
-
-	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
-
-	// Ensure that NodeUnpublishVolume is only called once per volume
-	AddGatekeeper(volumeName)
-	defer RemoveGatekeeper(volumeName)
-
-	klog.Infof("[START] unpublishing volume (%s) at target path %s", volumeName, req.GetTargetPath())
-
-	_, err := os.Stat(req.GetTargetPath())
-	if err == nil {
-		klog.Infof("unmounting volume at %s", req.GetTargetPath())
-		klog.V(4).Infof("command: %s %s", "mountpoint", req.GetTargetPath())
-		out, err := exec.Command("mountpoint", req.GetTargetPath()).CombinedOutput()
-		if err == nil {
-			klog.V(4).Infof("command: %s %s", "umount -l", req.GetTargetPath())
-			out, err := exec.Command("umount", "-l", req.GetTargetPath()).CombinedOutput()
-			if err != nil {
-				return nil, status.Error(codes.Internal, string(out))
-			}
-		} else {
-			klog.Warningf("assuming that volume is already unmounted: %s", out)
-		}
-
-		err = os.Remove(req.GetTargetPath())
-		if err != nil && !os.IsNotExist(err) {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
-		klog.Warningf("assuming that volume is already unmounted: %v", err)
-	}
-
-	klog.Infof("loading FC connection info from %s", fc.connectorInfoPath)
+func (fc *fcStorage) DetachStorage(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) error {
+	klog.InfoS("loading FC connection info from file", "connectorInfoPath", fc.connectorInfoPath)
 	connector, err := fclib.GetConnectorFromFile(fc.connectorInfoPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			klog.Warning(errors.Wrap(err, "assuming that FC connection was already closed"))
-			return &csi.NodeUnpublishVolumeResponse{}, nil
+		if errors.Is(err, fs.ErrNotExist) {
+			klog.ErrorS(err, "assuming that FC connection was already closed")
+			return nil
+		} else {
+			return err
 		}
-		return nil, status.Error(codes.Internal, err.Error())
 	}
-	klog.Infof("connector.OSPathName (%s)", connector.OSPathName)
+	klog.InfoS("connector.OSPathName", "connector.OSPathName", connector.OSPathName)
 
 	if IsVolumeInUse(connector.OSPathName) {
-		klog.Info("volume is still in use on the node, thus it will not be detached")
-		return &csi.NodeUnpublishVolumeResponse{}, nil
+		klog.InfoS("volume is still in use on the node, thus it will not be detached")
+		return nil
 	}
 
 	_, err = os.Stat(connector.OSPathName)
-	if err != nil && os.IsNotExist(err) {
-		klog.Warningf("assuming that volume is already disconnected: %s", err)
-		return &csi.NodeUnpublishVolumeResponse{}, nil
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		klog.ErrorS(err, "assuming that volume is already disconnected")
+		return nil
 	}
 
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
-	out, err := exec.Command("ls", "-l", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)).CombinedOutput()
-	klog.Infof("check for dm-name: ls -l %s, err = %v, out = \n%s", fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn), err, string(out))
+	diskByIdPath := fmt.Sprintf("/dev/disk/by-id/dm-name-3%s", wwn)
+	out, err := exec.Command("ls", "-l", diskByIdPath).CombinedOutput()
+	klog.InfoS("check for dm-name", "command", fmt.Sprintf("ls -l %s, err = %v, out = \n%s", diskByIdPath, err, string(out)))
 
 	if !connector.Multipath {
 		// If we didn't discover the multipath device initially, double check that we didn't just miss it
@@ -145,29 +103,36 @@ func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 		}
 		discoveredMpathName, devices := fclib.FindDiskById(klog.FromContext(ctx), wwn, connector.IoHandler)
 		if (discoveredMpathName != connector.OSPathName) && (len(devices) > 0) {
-			klog.V(0).InfoS("Found additional linked devices", "path", discoveredMpathName, "devices", devices)
-			klog.V(0).InfoS("Replacing original connector info prior to Detach", "originalMultipathDevice", connector.OSPathName,
-				"discoveredMultipathDevice", discoveredMpathName, "originalLinkedDevices", connector.OSDevicePaths, "discoveredLinkedDevices", devices)
+			klog.V(0).InfoS("Found additional linked devices", "discoveredMpathName", discoveredMpathName, "devices", devices)
+			klog.V(0).InfoS("Replacing original connector info prior to Detach",
+				"originalDevice", connector.OSPathName, "newDevice", discoveredMpathName,
+				"originalDevicePaths", connector.OSDevicePaths, "newDevicePaths", devices)
 			connector.OSPathName = discoveredMpathName
 			connector.OSDevicePaths = devices
 			connector.Multipath = true
 		}
 	}
 
-	klog.Info("DisconnectVolume, detaching device")
+	klog.InfoS("DisconnectVolume, detaching device")
 	err = fclib.Detach(ctx, connector.OSPathName, connector.IoHandler)
-
 	if err != nil {
-		return nil, err
+		klog.ErrorS(err, "error detaching FC connection")
+		return err
 	}
 
-	klog.Infof("deleting FC connection info file %s", fc.connectorInfoPath)
+	klog.InfoS("deleting FC connection info file", "fc.connectorInfoPath", fc.connectorInfoPath)
 	os.Remove(fc.connectorInfoPath)
+	return nil
+}
 
-	GlobalRemovedDevicesMap[connector.VolumeWWN] = time.Now()
+// NodePublishVolume mounts the volume mounted to the staging path to the target path
+func (fc *fcStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "FC specific NodePublishVolume not implemented")
+}
 
-	klog.Info("successfully detached FC device")
-	return &csi.NodeUnpublishVolumeResponse{}, nil
+// NodeUnpublishVolume unmounts the volume from the target path
+func (fc *fcStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "FC specific NodeUnpublishVolume not implemented")
 }
 
 // NodeGetVolumeStats return info about a given volume
