@@ -13,17 +13,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var (
-	volumeCaps = []csi.VolumeCapability_AccessMode{
-		{
-			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-		},
-		{
-			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
-		},
-	}
-)
-
 // Extract available SAS addresses for Nodes from topology segments
 // This will contain all SAS initiators for all nodes unless the storage class
 // has specified allowed or preferred topologies
@@ -203,23 +192,22 @@ func getSizeStr(size int64) string {
 // isValidVolumeCapabilities validates the given VolumeCapability array is valid
 func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
 	if len(volCaps) == 0 {
-		return fmt.Errorf("CreateVolume Volume capabilities must be provided")
+		return fmt.Errorf("volume capabilities to validate not provided")
 	}
-	hasSupport := func(cap *csi.VolumeCapability) error {
-		if blk := cap.GetBlock(); blk != nil {
-			return fmt.Errorf("driver only supports mount access type volume capability")
-		}
-		for _, c := range volumeCaps {
-			if c.GetMode() == cap.AccessMode.GetMode() {
-				return nil
+
+	hasSupport := func(cap *csi.VolumeCapability) bool {
+		for _, supportedMode := range common.SupportedAccessModes {
+			// we currently support block and mount volumes with both supported access modes, so don't check mount types
+			if cap.GetAccessMode().Mode == supportedMode {
+				return true
 			}
 		}
-		return fmt.Errorf("driver does not support access mode %v", cap.AccessMode.GetMode())
+		return false
 	}
 
 	for _, c := range volCaps {
-		if err := hasSupport(c); err != nil {
-			return err
+		if !hasSupport(c) {
+			return fmt.Errorf("driver does not support access mode %v", c.GetAccessMode())
 		}
 	}
 	return nil

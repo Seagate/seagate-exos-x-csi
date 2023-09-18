@@ -31,17 +31,6 @@ const (
 	invalidArgumentErrorCode              = -10058
 )
 
-var volumeCapabilities = []*csi.VolumeCapability{
-	{
-		AccessType: &csi.VolumeCapability_Mount{
-			Mount: &csi.VolumeCapability_MountVolume{},
-		},
-		AccessMode: &csi.VolumeCapability_AccessMode{
-			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-		},
-	},
-}
-
 var csiMutexes = map[string]*sync.Mutex{
 	"/csi.v1.Controller/CreateVolume":              {},
 	"/csi.v1.Controller/ControllerPublishVolume":   {},
@@ -170,8 +159,7 @@ func (controller *Controller) ControllerGetCapabilities(ctx context.Context, req
 	return &csi.ControllerGetCapabilitiesResponse{Capabilities: csc}, nil
 }
 
-// ValidateVolumeCapabilities checks whether the volume capabilities requested
-// are supported.
+// ValidateVolumeCapabilities checks whether a provisioned volume supports the capabilities requested
 func (controller *Controller) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
@@ -188,7 +176,7 @@ func (controller *Controller) ValidateVolumeCapabilities(ctx context.Context, re
 
 	return &csi.ValidateVolumeCapabilitiesResponse{
 		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
-			VolumeCapabilities: volumeCapabilities,
+			VolumeCapabilities: req.GetVolumeCapabilities(),
 		},
 	}, nil
 }
@@ -301,19 +289,27 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 			return status.Error(codes.InvalidArgument, "missing volume capabilities")
 		}
 		for _, capability := range *capabilities {
-			if capability.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER {
-				return status.Error(codes.FailedPrecondition, "storage only supports ReadWriteOnce access mode")
+			accessMode := capability.GetAccessMode().GetMode()
+			accessModeSupported := false
+			for _, mode := range common.SupportedAccessModes {
+				if accessMode == mode {
+					accessModeSupported = true
+				}
 			}
-			if capability.GetMount().GetFsType() == "" {
-				if err := checkIfKeyExistsInConfig(common.FsTypeConfigKey); err != nil {
-					return status.Error(codes.FailedPrecondition, "no fstype specified in storage class")
-				} else {
-					klog.InfoS("storage class parameter "+common.FsTypeConfigKey+" is deprecated. Please migrate to 'csi.storage.k8s.io/fstype'", "parameter", common.FsTypeConfigKey)
+			if !accessModeSupported {
+				return status.Errorf(codes.FailedPrecondition, "driver does not support access mode %v", accessMode)
+			}
+			if mount := capability.GetMount(); mount != nil {
+				if mount.GetFsType() == "" {
+					if err := checkIfKeyExistsInConfig(common.FsTypeConfigKey); err != nil {
+						return status.Error(codes.FailedPrecondition, "no fstype specified in storage class")
+					} else {
+						klog.InfoS("storage class parameter "+common.FsTypeConfigKey+" is deprecated. Please migrate to 'csi.storage.k8s.io/fstype'", "parameter", common.FsTypeConfigKey)
+					}
 				}
 			}
 		}
 	}
-
 	return nil
 }
 

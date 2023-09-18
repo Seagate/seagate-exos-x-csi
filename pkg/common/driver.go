@@ -56,6 +56,11 @@ const (
 	NodeServicePortEnvVar = "CSI_NODE_SERVICE_PORT"
 )
 
+var SupportedAccessModes = [2]csi.VolumeCapability_AccessMode_Mode{
+	csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+	csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+}
+
 // Driver contains main resources needed by the driver and references the underlying specific driver
 type Driver struct {
 	Server *grpc.Server

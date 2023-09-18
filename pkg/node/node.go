@@ -162,14 +162,34 @@ func (node *Node) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapab
 	return &csi.NodeGetCapabilitiesResponse{Capabilities: csc}, nil
 }
 
-// NodePublishVolume mounts the volume mounted to the staging path to the target path
+// NodePublishVolume mounts the device to the target path
 func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot publish volume with empty id")
+	}
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot publish volume at an empty path")
+	}
+	if req.GetVolumeCapability() == nil {
+		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
+	}
+	if req.GetVolumeCapability().GetBlock() != nil &&
+		req.GetVolumeCapability().GetMount() != nil {
+		return nil, status.Error(codes.InvalidArgument, "cannot have both block and mount access type")
+	}
+	if req.GetVolumeCapability().GetBlock() == nil &&
+		req.GetVolumeCapability().GetMount() == nil {
+		return nil, status.Error(codes.InvalidArgument, "volume access type not specified, must be either block or mount")
+	}
 	// Extract the volume name and the storage protocol from the augmented volume id
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	storageProtocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
-	klog.Infof("NodePublishVolume called with volume name %s", volumeName)
+	// Ensure that NodePublishVolume is only called once per volume
+	storage.AddGatekeeper(volumeName)
+	defer storage.RemoveGatekeeper(volumeName)
+
+	klog.InfoS("NodePublishVolume call", "volumeName", volumeName)
 
 	config := make(map[string]string)
 	config["connectorInfoPath"] = node.getConnectorInfoPath(storageProtocol, volumeName)
@@ -177,35 +197,63 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 
 	// Get storage handler
 	storageNode, err := storage.NewStorageNode(storageProtocol, config)
-	if storageNode != nil {
-		return storageNode.NodePublishVolume(ctx, req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// Do any required device discovery and return path of the device on the node fs
+	path, err := storageNode.AttachStorage(ctx, req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	klog.Errorf("NodePublishVolume error for storage protocol (%v): %v", storageProtocol, err)
-	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storageProtocol)
+	if req.GetVolumeCapability().GetMount() != nil {
+		err = storage.MountFilesystem(req, path)
+	} else if req.GetVolumeCapability().GetBlock() != nil {
+		err = storage.MountDevice(req, path)
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-// NodeUnpublishVolume unmounts the volume from the target path
+// NodeUnpublishVolume unmounts the volume from the target path and removes devices
 func (node *Node) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty volume id")
+	}
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "cannot unpublish volume with an empty target path")
+	}
 
 	// Extract the volume name and the storage protocol from the augmented volume id
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 	storageProtocol, _ := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 
-	klog.Infof("NodeUnpublishVolume volume %s at target path %s", volumeName, req.GetTargetPath())
+	// Ensure that NodeUnpublishVolume is only called once per volume
+	storage.AddGatekeeper(volumeName)
+	defer storage.RemoveGatekeeper(volumeName)
+
+	klog.InfoS("NodeUnpublishVolume volume", "volumeName", volumeName, "targetPath", req.GetTargetPath())
 
 	config := make(map[string]string)
 	config["connectorInfoPath"] = node.getConnectorInfoPath(storageProtocol, volumeName)
-	klog.V(2).Infof("NodeUnpublishVolume connectorInfoPath (%v)", config["connectorInfoPath"])
+	klog.V(2).InfoS("NodeUnpublishVolume", "connectorInfoPath", config["connectorInfoPath"])
 
 	// Get storage handler
 	storageNode, err := storage.NewStorageNode(storageProtocol, config)
-	if storageNode != nil {
-		return storageNode.NodeUnpublishVolume(ctx, req)
+	if storageNode == nil {
+		klog.ErrorS(err, "Error creating storage node")
+		return nil, status.Errorf(codes.Internal, "unable to create storage node")
+	}
+	storage.Unmount(req.GetTargetPath())
+	err = storageNode.DetachStorage(ctx, req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	klog.Errorf("NodeUnpublishVolume error for storage protocol (%v): %v", storageProtocol, err)
-	return nil, status.Errorf(codes.Internal, "Unable to process for storage protocol (%v)", storageProtocol)
+	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 // NodeExpandVolume finalizes volume expansion on the node
