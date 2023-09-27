@@ -49,7 +49,7 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 
 	var snapshot *csi.Snapshot
 	for _, ss := range snapshots {
-		if ss.ObjectName != "snapshots" {
+		if ss.ObjectName != "snapshot" {
 			continue
 		}
 
@@ -157,19 +157,17 @@ func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSn
 }
 
 func newSnapshotFromResponse(snapshot *storageapitypes.SnapshotObject) (*csi.Snapshot, error) {
-	if snapshot.ObjectName != "snapshots" {
-		return nil, fmt.Errorf("not a snapshot object, type is  %v", snapshot.ObjectName)
+	if snapshot.ObjectName != "snapshot" {
+		return nil, fmt.Errorf("not a snapshot object, type is %v", snapshot.ObjectName)
 	}
 
-	creationTime, _ := creationTimeFromString(snapshot.CreationDateTime)
-
-	klog.Info("csi snapshot info", "snapshot", snapshot.Name, "volume", snapshot.MasterVolumeName)
+	klog.InfoS("csi snapshot info", "snapshot", snapshot.Name, "volume", snapshot.MasterVolumeName, "creationTime", snapshot.CreationTime)
 
 	return &csi.Snapshot{
 		SizeBytes:      snapshot.TotalSizeNumeric,
 		SnapshotId:     snapshot.Name,
 		SourceVolumeId: snapshot.MasterVolumeName,
-		CreationTime:   creationTime,
+		CreationTime:   snapshot.CreationTime,
 		ReadyToUse:     true,
 	}, nil
 }
