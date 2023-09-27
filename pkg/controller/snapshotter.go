@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"time"
 
 	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
@@ -170,13 +167,4 @@ func newSnapshotFromResponse(snapshot *storageapitypes.SnapshotObject) (*csi.Sna
 		CreationTime:   snapshot.CreationTime,
 		ReadyToUse:     true,
 	}, nil
-}
-
-func creationTimeFromString(creationTime string) (*timestamp.Timestamp, error) {
-	creationTimestamp, err := strconv.ParseInt(creationTime, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	return ptypes.TimestampProto(time.Unix(creationTimestamp, 0))
 }
