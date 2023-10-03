@@ -56,6 +56,7 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 	}
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
+	volumeWWN, _ := common.VolumeIdGetWwn(req.GetVolumeId())
 	nodeIP := req.GetNodeId()
 	storageProtocol, err := common.VolumeIdGetStorageProtocol(req.GetVolumeId())
 	if err != nil {
@@ -78,7 +79,7 @@ func (driver *Controller) ControllerUnpublishVolume(ctx context.Context, req *cs
 				klog.Errorf("unknown error while unmapping initiator %s: %v", initiator, err)
 			}
 		} else {
-			driver.NotifyUnmap(ctx, nodeIP, volumeName)
+			driver.NotifyUnmap(ctx, nodeIP, volumeWWN)
 		}
 	}
 

@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	saslib "github.com/Seagate/csi-lib-sas/sas"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pkg/errors"
@@ -67,7 +68,7 @@ type sasStorage struct {
 }
 
 // Map of device WWNs to timestamp of when they were unpublished from the node
-var GlobalRemovedDevicesMap = map[string]time.Time{}
+var SASandFCRemovedDevicesMap = map[string]time.Time{}
 
 // buildCommonService:
 func buildCommonService(config map[string]string) (commonService, error) {
@@ -148,6 +149,22 @@ func CheckFs(path string, fstype string, context string) error {
 	klog.Infof("Checking filesystem (%s -n %s) [%s]", fsRepairCommand, path, context)
 	if out, err := exec.Command(fsRepairCommand, "-n", path).CombinedOutput(); err != nil {
 		return errors.New(string(out))
+	}
+	return nil
+}
+
+// Check for and remove any rediscovered iscsi devices that were previously unmapped
+// This is a common function for SAS and FC
+func CheckPreviouslyRemovedDevices(ctx context.Context) error {
+	klog.Info("Checking previously removed devices")
+	for wwn := range SASandFCRemovedDevicesMap {
+		klog.Infof("Checking for rediscovery of wwn:%s", wwn)
+
+		dm, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, &saslib.OSioHandler{})
+		if dm != "" {
+			klog.Infof("Rediscovery found for wwn:%s -- mpath device: %s, devices: %v", wwn, dm, devices)
+			saslib.Detach(ctx, dm, &saslib.OSioHandler{})
+		}
 	}
 	return nil
 }

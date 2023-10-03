@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	saslib "github.com/Seagate/csi-lib-sas/sas"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -121,6 +122,8 @@ func GetSASInitiators() ([]string, error) {
 }
 
 func (sas *sasStorage) AttachStorage(ctx context.Context, req *csi.NodePublishVolumeRequest) (string, error) {
+	CheckPreviouslyRemovedDevices(ctx)
+
 	klog.InfoS("initiating SAS connection...")
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
 	connector := saslib.Connector{VolumeWWN: wwn}
@@ -183,11 +186,13 @@ func (sas *sasStorage) DetachStorage(ctx context.Context, req *csi.NodeUnpublish
 	klog.Info("DisconnectVolume, detaching SAS device")
 	err = saslib.Detach(ctx, connector.OSPathName, connector.IoHandler)
 	if err != nil {
+		klog.ErrorS(err, "error detaching FC connection")
 		return err
 	}
 
 	klog.InfoS("deleting SAS connection info file", "sas.connectorInfoPath", sas.connectorInfoPath)
 	os.Remove(sas.connectorInfoPath)
+	SASandFCRemovedDevicesMap[connector.VolumeWWN] = time.Now()
 	return nil
 }
 
@@ -198,20 +203,6 @@ func (sas *sasStorage) NodePublishVolume(ctx context.Context, req *csi.NodePubli
 // NodeUnpublishVolume unmounts the volume from the target path
 func (sas *sasStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "SAS specific NodeUnpublishVolume not implemented")
-}
-
-func checkPreviouslyRemovedDevices(ctx context.Context) error {
-	klog.Info("Checking previously removed devices")
-	for wwn := range GlobalRemovedDevicesMap {
-		klog.Infof("Checking for rediscovery of wwn:%s", wwn)
-
-		dm, devices := saslib.FindDiskById(klog.FromContext(ctx), wwn, &saslib.OSioHandler{})
-		if dm != "" {
-			klog.Infof("Rediscovery found for wwn:%s -- mpath device: %s, devices: %v", wwn, dm, devices)
-			saslib.Detach(ctx, dm, &saslib.OSioHandler{})
-		}
-	}
-	return nil
 }
 
 // NodeGetVolumeStats return info about a given volume

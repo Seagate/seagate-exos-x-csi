@@ -37,8 +37,9 @@ func (s *server) GetInitiators(ctx context.Context, in *pb.InitiatorRequest) (*p
 
 // Notify node that a volume has been unmapped from the controller
 func (s *server) NotifyUnmap(ctx context.Context, in *pb.UnmappedVolume) (*pb.Ack, error) {
-	delete(storage.GlobalRemovedDevicesMap, in.GetVolumeName())
-	klog.V(5).InfoS("Global unmapped device map deletion", "globalMap", storage.GlobalRemovedDevicesMap, "volumeName", in.GetVolumeName())
+	storage.CheckPreviouslyRemovedDevices(ctx)
+	delete(storage.SASandFCRemovedDevicesMap, in.GetVolumeName())
+	klog.V(4).InfoS("Previously unmapped device - ControllerUnpublishComplete Notification", "deviceMap", storage.SASandFCRemovedDevicesMap, "volumeName", in.GetVolumeName())
 	return &pb.Ack{Ack: 1}, nil
 }
 

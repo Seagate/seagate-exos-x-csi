@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	fclib "github.com/Seagate/csi-lib-sas/sas"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
@@ -53,6 +54,7 @@ func (fc *fcStorage) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstage
 }
 
 func (fc *fcStorage) AttachStorage(ctx context.Context, req *csi.NodePublishVolumeRequest) (string, error) {
+	CheckPreviouslyRemovedDevices(ctx)
 	klog.InfoS("initiating FC connection...")
 	wwn, _ := common.VolumeIdGetWwn(req.GetVolumeId())
 	connector := &fclib.Connector{VolumeWWN: wwn}
@@ -122,6 +124,7 @@ func (fc *fcStorage) DetachStorage(ctx context.Context, req *csi.NodeUnpublishVo
 
 	klog.InfoS("deleting FC connection info file", "fc.connectorInfoPath", fc.connectorInfoPath)
 	os.Remove(fc.connectorInfoPath)
+	SASandFCRemovedDevicesMap[connector.VolumeWWN] = time.Now()
 	return nil
 }
 

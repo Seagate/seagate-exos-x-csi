@@ -41,14 +41,14 @@ func GetNodeInitiators(ctx context.Context, conn *grpc.ClientConn, reqType pb.In
 	return initiators.Initiators, nil
 }
 
-func NotifyUnmap(ctx context.Context, conn *grpc.ClientConn, volumeName string) (err error) {
+func NotifyUnmap(ctx context.Context, conn *grpc.ClientConn, volumeWWN string) (err error) {
 	client := pb.NewNodeServiceClient(conn)
-	unmappedVolumePb := pb.UnmappedVolume{VolumeName: volumeName}
+	unmappedVolumePb := pb.UnmappedVolume{VolumeName: volumeWWN}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	_, err = client.NotifyUnmap(ctx, &unmappedVolumePb)
 	if err != nil {
-		klog.ErrorS(err, "Error during unmap notification", "unmappedVolumeName", volumeName)
+		klog.ErrorS(err, "Error during unmap notification", "unmappedVolumeName", volumeWWN)
 	}
 	return
 }
