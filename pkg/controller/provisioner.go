@@ -118,14 +118,18 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			}
 
 		} else {
-			_, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
+			volume, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
 			if err2 != nil {
 				return nil, err
 			}
+			if volume != nil {
+				wwn = volume.Wwn
+			}
 		}
 	}
-
-	wwn, err = controller.client.GetVolumeWwn(volumeName)
+	if wwn == "" {
+		wwn, err = controller.client.GetVolumeWwn(volumeName)
+	}
 	if err != nil {
 		klog.ErrorS(err, "Error retrieving WWN of new volume", "volumeName", volumeName)
 		return nil, err
