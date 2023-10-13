@@ -9,7 +9,7 @@ import (
 	"sync"
 	"syscall"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/v1"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
 	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"
@@ -20,16 +20,16 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const (
-	snapshotNotFoundErrorCode             = -10050
-	hostMapDoesNotExistsErrorCode         = -10074
-	volumeNotFoundErrorCode               = -10075
-	volumeHasSnapshot                     = -10183
-	snapshotAlreadyExists                 = -10186
-	initiatorNicknameOrIdentifierNotFound = -10386
-	unmapFailedErrorCode                  = -10509
-	invalidArgumentErrorCode              = -10058
-)
+var volumeCapabilities = []*csi.VolumeCapability{
+	{
+		AccessType: &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{},
+		},
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+	},
+}
 
 var csiMutexes = map[string]*sync.Mutex{
 	"/csi.v1.Controller/CreateVolume":              {},
@@ -226,7 +226,7 @@ func (controller *Controller) beginRoutine(ctx *DriverCtx, methodName string) er
 }
 
 func (controller *Controller) endRoutine() {
-	controller.client.HTTPClient.CloseIdleConnections()
+	controller.client.CloseConnections()
 }
 
 func (controller *Controller) configureClient(credentials map[string]string) error {
@@ -246,15 +246,13 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.APIAddressConfigKey))
 	}
 
-	klog.Infof("using API at address (%s)", apiAddr)
+	klog.InfoS("using API", "address", apiAddr)
 	if controller.client.SessionValid(apiAddr, username) {
 		return nil
 	}
 
-	controller.client.Username = username
-	controller.client.Password = password
-	controller.client.Addr = apiAddr
-	klog.Infof("login to API address %q as user %q", controller.client.Addr, controller.client.Username)
+	klog.InfoS("login to API", "address", apiAddr, "username", username)
+	controller.client.StoreCredentials(apiAddr, "", username, password)
 	err := controller.client.Login()
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
@@ -341,7 +339,7 @@ func (controller *Controller) GetNodeInitiators(ctx context.Context, nodeAddress
 	return initiators, err
 }
 
-func (controller *Controller) NotifyUnmap(ctx context.Context, nodeAddress string, volumeName string) error {
+func (controller *Controller) NotifyUnmap(ctx context.Context, nodeAddress string, volumeWWN string) error {
 	clientConnection := controller.nodeServiceClients[nodeAddress]
 	if clientConnection == nil {
 		klog.V(3).InfoS("node grpc client not found, establishing...", "nodeAddress", nodeAddress)
@@ -352,7 +350,7 @@ func (controller *Controller) NotifyUnmap(ctx context.Context, nodeAddress strin
 		}
 		controller.nodeServiceClients[nodeAddress] = clientConnection
 	}
-	return node_service.NotifyUnmap(ctx, clientConnection, volumeName)
+	return node_service.NotifyUnmap(ctx, clientConnection, volumeWWN)
 }
 
 // Graceful shutdown of Node-Controller RPC Clients

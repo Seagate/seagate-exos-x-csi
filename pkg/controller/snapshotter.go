@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"time"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go"
+	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
@@ -36,23 +33,24 @@ func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.Creat
 		return nil, status.Error(codes.InvalidArgument, "snapshot SourceVolumeId is not valid")
 	}
 
-	_, respStatus, err := controller.client.CreateSnapshot(sourceVolumeId, snapshotName)
-	if err != nil && respStatus.ReturnCode != snapshotAlreadyExists {
+	respStatus, err := controller.client.CreateSnapshot(sourceVolumeId, snapshotName)
+	if err != nil && respStatus.ReturnCode != storageapitypes.SnapshotAlreadyExists {
 		return nil, err
 	}
 
-	response, _, err := controller.client.ShowSnapshots(snapshotName, "")
+	// The expectation is that show snapshots will return a single array item for the snapshot created
+	snapshots, _, err := controller.client.ShowSnapshots(snapshotName, "")
 	if err != nil {
 		return nil, err
 	}
 
 	var snapshot *csi.Snapshot
-	for _, object := range response.Objects {
-		if object.Typ != "snapshots" {
+	for _, ss := range snapshots {
+		if ss.ObjectName != "snapshot" {
 			continue
 		}
 
-		snapshot, err = newSnapshotFromResponse(&object)
+		snapshot, err = newSnapshotFromResponse(&ss)
 		if err != nil {
 			return nil, err
 		}
@@ -76,9 +74,9 @@ func (controller *Controller) DeleteSnapshot(ctx context.Context, req *csi.Delet
 		return nil, status.Error(codes.InvalidArgument, "DeleteSnapshot snapshot id is required")
 	}
 
-	_, status, err := controller.client.DeleteSnapshot(req.SnapshotId)
+	status, err := controller.client.DeleteSnapshot(req.SnapshotId)
 	if err != nil {
-		if status != nil && status.ReturnCode == snapshotNotFoundErrorCode {
+		if status != nil && status.ReturnCode == storageapitypes.SnapshotNotFoundErrorCode {
 			klog.Infof("snapshot %s does not exist, assuming it has already been deleted", req.SnapshotId)
 			return &csi.DeleteSnapshotResponse{}, nil
 		}
@@ -92,10 +90,10 @@ func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSn
 	sourceVolumeId, err := common.VolumeIdGetName(req.GetSourceVolumeId())
 
 	response, respStatus, err := controller.client.ShowSnapshots(req.SnapshotId, sourceVolumeId)
-	// invalidArgumentErrorCode returned from controller when an invalid volume is specified
-	// return an empty response object in this case
+	// BadInputParam is returned from the controller when an invalid volume is specified,
+	// so return an empty response object in this case
 	if err != nil {
-		if respStatus.ReturnCode == invalidArgumentErrorCode {
+		if respStatus.ReturnCode == storageapitypes.BadInputParam {
 			return &csi.ListSnapshotsResponse{
 				Entries:   []*csi.ListSnapshotsResponse_Entry{},
 				NextToken: "",
@@ -112,7 +110,7 @@ func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSn
 	snapshots := []*csi.ListSnapshotsResponse_Entry{}
 	var count, total, next int32 = 0, 0, math.MaxInt32
 
-	for _, object := range response.Objects {
+	for _, object := range response {
 
 		// Convert raw object into csi.Snapshot object
 		snapshot, err := newSnapshotFromResponse(&object)
@@ -155,35 +153,18 @@ func (controller *Controller) ListSnapshots(ctx context.Context, req *csi.ListSn
 	}, nil
 }
 
-func newSnapshotFromResponse(object *storageapi.Object) (*csi.Snapshot, error) {
-	if object.Typ != "snapshots" {
-		return nil, fmt.Errorf("not a snapshot object, type is  %v", object.Typ)
+func newSnapshotFromResponse(snapshot *storageapitypes.SnapshotObject) (*csi.Snapshot, error) {
+	if snapshot.ObjectName != "snapshot" {
+		return nil, fmt.Errorf("not a snapshot object, type is %v", snapshot.ObjectName)
 	}
 
-	properties, err := object.GetProperties("total-size-numeric", "name", "master-volume-name", "creation-date-time-numeric")
-	if err != nil {
-		return nil, fmt.Errorf("could not read snapshot %v", err)
-	}
-
-	sizeBytes, err := strconv.ParseInt(properties[0].Data, 10, 64)
-	snapshotId := properties[1].Data
-	sourceVolumeId := properties[2].Data
-	creationTime, err := creationTimeFromString(properties[3].Data)
+	klog.InfoS("csi snapshot info", "snapshot", snapshot.Name, "volume", snapshot.MasterVolumeName, "creationTime", snapshot.CreationTime)
 
 	return &csi.Snapshot{
-		SizeBytes:      sizeBytes,
-		SnapshotId:     snapshotId,
-		SourceVolumeId: sourceVolumeId,
-		CreationTime:   creationTime,
+		SizeBytes:      snapshot.TotalSizeNumeric,
+		SnapshotId:     snapshot.Name,
+		SourceVolumeId: snapshot.MasterVolumeName,
+		CreationTime:   snapshot.CreationTime,
 		ReadyToUse:     true,
 	}, nil
-}
-
-func creationTimeFromString(creationTime string) (*timestamp.Timestamp, error) {
-	creationTimestamp, err := strconv.ParseInt(creationTime, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	return ptypes.TimestampProto(time.Unix(creationTimestamp, 0))
 }
