@@ -1,3 +1,38 @@
+# [1.8.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.7.3...v1.8.0) (2023-10-13)
+
+### Bug Fixes
+
+- always retrieve volume wwn ([2359f1b](https://github.com/Seagate/seagate-exos-x-csi/commit/2359f1b6bb7c144ef3fb7aa943bbc6ec43b4dec3))
+- Fix previously unmapped device discovery fix for new nodePublish code ([232d6ae](https://github.com/Seagate/seagate-exos-x-csi/commit/232d6ae1eca10a9e76f2159707a8c5c745561d23))
+- fix snapshot object creation for apiv2 integration ([d3acd84](https://github.com/Seagate/seagate-exos-x-csi/commit/d3acd84944e3cb6e37a707c534d09e0981c938ca))
+
+### Chores
+
+- remove unused createTimestampFromString function ([6ca0e8b](https://github.com/Seagate/seagate-exos-x-csi/commit/6ca0e8b7b627aa23e5051b8a404086efb76356e9))
+- update go dependency version ([a706240](https://github.com/Seagate/seagate-exos-x-csi/commit/a706240fe1959977c7c77342abd2e519c62b28d0))
+- Update versions for v1.8.0 release ([5e00c39](https://github.com/Seagate/seagate-exos-x-csi/commit/5e00c39715cab235bead5849576465bb2df2f1e8))
+
+### Features
+
+- **apiv2:** move v1 to pkg/exosx ([bbd1b14](https://github.com/Seagate/seagate-exos-x-csi/commit/bbd1b14c5c1c2f4fb3bfe93d6ea8232a14052963))
+- storageclass CHAP support ([f2a5d45](https://github.com/Seagate/seagate-exos-x-csi/commit/f2a5d45b77d4a9aaf1a74a53befbda16215e934e))
+
+### Other
+
+- Merge pull request #94 from David-T-White/feat/apiv2-update ([04df2ca](https://github.com/Seagate/seagate-exos-x-csi/commit/04df2ca72f4826422a1bd65346488abe49220016)), closes [#94](https://github.com/Seagate/seagate-exos-x-csi/issues/94)
+- accept protocol+ipaddress ([3d962cf](https://github.com/Seagate/seagate-exos-x-csi/commit/3d962cfc8b4be0174d43547e1bace35b16dd2d61))
+- pass http protocol with credentials ([037986c](https://github.com/Seagate/seagate-exos-x-csi/commit/037986ce247c305d1da28b46fe7979581365f0f1))
+- structured logging correction, include correction ([c4e570b](https://github.com/Seagate/seagate-exos-x-csi/commit/c4e570b639f78e99a9ba17626e2d77bd8aac2300))
+- remove api XML exposure, common api codes ([07d43be](https://github.com/Seagate/seagate-exos-x-csi/commit/07d43be0a3e4367da7ba74321fb393efec64654d))
+- rename pkg/v1 and retrieve wwn from volume object ([079cd18](https://github.com/Seagate/seagate-exos-x-csi/commit/079cd1818846892bd6a16faa16d6b4757ccd4ef6))
+- required change to GetTargetId ([f7646ab](https://github.com/Seagate/seagate-exos-x-csi/commit/f7646ab4179d006fad1ee4bdfd26c65f5caf5591))
+- remove api XML exposure, common api codes ([fafb0a0](https://github.com/Seagate/seagate-exos-x-csi/commit/fafb0a0b27151171b991bde1dc5119bba5e03def))
+- Block volume support and refactor of node publish/unpublish (#93) ([46331ea](https://github.com/Seagate/seagate-exos-x-csi/commit/46331ea7daaba3ba69adc6543daf62fbfea923e9)), closes [#93](https://github.com/Seagate/seagate-exos-x-csi/issues/93)
+
+### Performance
+
+- Only call getVolumeWWN if we didn't get it in response of CreateVolume call ([bb2a524](https://github.com/Seagate/seagate-exos-x-csi/commit/bb2a524042479d20536135c758bbe61d0ec3221a))
+
 ## [1.7.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.7.2...v1.7.3) (2023-07-24)
 
 ### Bug Fixes
