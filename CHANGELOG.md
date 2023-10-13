@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.0...v1.8.1) (2023-10-13)
+
+### Chores
+
+- Update container version label to 1.8.0 ([26365bc](https://github.com/Seagate/seagate-exos-x-csi/commit/26365bce96f22e8d7a5f8afec151bbfbc7cddfba))
+
 # [1.8.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.7.3...v1.8.0) (2023-10-13)
 
 ### Bug Fixes
