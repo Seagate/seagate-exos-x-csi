@@ -1,3 +1,9 @@
+## [1.8.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.1...v1.8.2) (2023-10-13)
+
+### Chores
+
+- Update versions to 1.8.2 ([f603c4c](https://github.com/Seagate/seagate-exos-x-csi/commit/f603c4c3c5e31cc9293be48113e39a5b6d875262))
+
 ## [1.8.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.0...v1.8.1) (2023-10-13)
 
 ### Chores
