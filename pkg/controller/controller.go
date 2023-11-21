@@ -9,7 +9,8 @@ import (
 	"sync"
 	"syscall"
 
-	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/v1"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/v2/pkg/api"
+	"github.com/Seagate/seagate-exos-x-api-go/v2/pkg/client"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/node_service"
 	pb "github.com/Seagate/seagate-exos-x-csi/pkg/node_service/node_servicepb"
@@ -226,7 +227,7 @@ func (controller *Controller) beginRoutine(ctx *DriverCtx, methodName string) er
 }
 
 func (controller *Controller) endRoutine() {
-	controller.client.CloseConnections()
+	controller.client.HTTPClient.CloseIdleConnections()
 }
 
 func (controller *Controller) configureClient(credentials map[string]string) error {
@@ -251,9 +252,13 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return nil
 	}
 
-	klog.InfoS("login to API", "address", apiAddr, "username", username)
-	controller.client.StoreCredentials(apiAddr, "", username, password)
-	err := controller.client.Login()
+	controller.client.StoreCredentials(apiAddr, "", "", "")
+
+	ctx := context.WithValue(context.Background(), client.ContextBasicAuth, client.BasicAuth{
+		UserName: username,
+		Password: password,
+	})
+	err := controller.client.Login(ctx)
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
 	}
