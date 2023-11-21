@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
+	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/v2/pkg/common"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/container-storage-interface/spec/lib/go/csi"

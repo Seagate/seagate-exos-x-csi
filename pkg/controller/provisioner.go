@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/pkg/common"
-	storageapi "github.com/Seagate/seagate-exos-x-api-go/pkg/v1"
+	storageapi "github.com/Seagate/seagate-exos-x-api-go/v2/pkg/api"
+	storageapitypes "github.com/Seagate/seagate-exos-x-api-go/v2/pkg/common"
 
 	"github.com/Seagate/seagate-exos-x-csi/pkg/common"
 	"github.com/Seagate/seagate-exos-x-csi/pkg/storage"
