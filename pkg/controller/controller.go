@@ -252,7 +252,8 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return nil
 	}
 
-	controller.client.StoreCredentials(apiAddr, "", "", "")
+	//these stored credentials are still used for the session valid check
+	controller.client.StoreCredentials(apiAddr, "", username, password)
 
 	ctx := context.WithValue(context.Background(), client.ContextBasicAuth, client.BasicAuth{
 		UserName: username,
