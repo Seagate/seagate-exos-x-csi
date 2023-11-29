@@ -1,6 +1,6 @@
 module github.com/Seagate/seagate-exos-x-csi
 
-go 1.19
+go 1.20
 
 require (
 	github.com/Seagate/csi-lib-iscsi v1.0.3
