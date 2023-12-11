@@ -1,3 +1,14 @@
+## [1.8.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.2...v1.8.3) (2023-12-11)
+
+### Chores
+
+- **deps:** bump yaml and semantic-release ([37ba56b](https://github.com/Seagate/seagate-exos-x-csi/commit/37ba56b78bbcc9d7b7eabb4119ad951de1927105))
+- Update versions for release v1.8.3 ([6634ec0](https://github.com/Seagate/seagate-exos-x-csi/commit/6634ec0580f9e17fc85a445129ea056f33aec6c2))
+
+### Other
+
+- seagate-exos-x-api-go library v2 compatibility updates (#98) ([aa72c7f](https://github.com/Seagate/seagate-exos-x-csi/commit/aa72c7f8fa6590a79d7e9f9f83384b4cba966bae)), closes [#98](https://github.com/Seagate/seagate-exos-x-csi/issues/98)
+
 ## [1.8.2](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.1...v1.8.2) (2023-10-13)
 
 ### Chores
