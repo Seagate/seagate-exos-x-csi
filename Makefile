@@ -20,7 +20,7 @@ endif
 ifdef VERSION
 VERSION := $(VERSION)
 else
-VERSION := v1.8.3
+VERSION := v1.8.4
 endif
 HELM_VERSION := $(subst v,,$(VERSION))
 VERSION_FLAG = -X $(GITHUB_URL)/pkg/common.Version=$(VERSION)
