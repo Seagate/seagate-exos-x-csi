@@ -1,3 +1,9 @@
+## [1.8.4](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.3...v1.8.4) (2024-01-31)
+
+### Bug Fixes
+
+- Update csi-lib-iscsi and api-go to integrate bug fixes ([6c43dd0](https://github.com/Seagate/seagate-exos-x-csi/commit/6c43dd0d29741b18f105a861e26ae1a030e5bf81))
+
 ## [1.8.3](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.2...v1.8.3) (2023-12-11)
 
 ### Chores
