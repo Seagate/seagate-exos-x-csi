@@ -75,14 +75,9 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 	size := req.GetCapacityRange().GetRequiredBytes()
 	sizeStr := getSizeStr(size)
 	pool := parameters[common.PoolConfigKey]
-	poolType, _ := controller.client.GetPoolType(pool)
 	wwn := ""
 
-	if len(poolType) == 0 {
-		poolType = "Virtual"
-	}
-
-	klog.Infof("creating volume %q (size %s) pool %q [%s] using protocol (%s)", volumeName, sizeStr, pool, poolType, storageProtocol)
+	klog.Infof("creating volume %q (size %s) pool %q using protocol (%s)", volumeName, sizeStr, pool, storageProtocol)
 
 	volumeExists, err := controller.client.CheckVolumeExists(volumeName, size)
 	if err != nil {
@@ -118,7 +113,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			}
 
 		} else {
-			volume, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey], poolType)
+			volume, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey])
 			if err2 != nil {
 				return nil, err
 			}
