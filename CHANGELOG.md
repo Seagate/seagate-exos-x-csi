@@ -1,3 +1,10 @@
+## [1.8.5](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.4...v1.8.5) (2024-02-27)
+
+### Chores
+
+- **deps-dev:** bump ip from 2.0.0 to 2.0.1 ([df8bfe4](https://github.com/Seagate/seagate-exos-x-csi/commit/df8bfe4a9747801b23f9c4c70cdbe194fb19d39c))
+- Update for api lib 2.2.0 create volume change ([42a1aa6](https://github.com/Seagate/seagate-exos-x-csi/commit/42a1aa661a855dc1cd10188b45612398913196de))
+
 ## [1.8.4](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.3...v1.8.4) (2024-01-31)
 
 ### Bug Fixes
