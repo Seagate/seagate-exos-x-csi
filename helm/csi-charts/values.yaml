@@ -19,39 +19,39 @@ image:
 csiProvisioner:
   image:
     repository: registry.k8s.io/sig-storage/csi-provisioner
-    tag: v3.0.0
+    tag: v5.0.1
   # -- Timeout for gRPC calls from the csi-provisioner to the controller
-  timeout: 30s
+  timeout: 60s
   # -- Extra arguments for csi-provisioner controller sidecar
-  extraArgs: [--feature-gates=Topology=true]
+  extraArgs: []
 # -- Controller sidecar for attachment handling
 csiAttacher:
   image:
     repository: registry.k8s.io/sig-storage/csi-attacher
-    tag: v3.3.0
+    tag: v4.6.1
   # -- Timeout for gRPC calls from the csi-attacher to the controller
-  timeout: 30s
+  timeout: 60s
   # -- Extra arguments for csi-attacher controller sidecar
   extraArgs: []
 # -- Controller sidecar for volume expansion
 csiResizer:
   image:
     repository: registry.k8s.io/sig-storage/csi-resizer
-    tag: v1.3.0
+    tag: v1.11.1
   # -- Extra arguments for csi-resizer controller sidecar
   extraArgs: []
 # -- Controller sidecar for snapshots handling
 csiSnapshotter:
   image:
     repository: registry.k8s.io/sig-storage/csi-snapshotter
-    tag: v4.2.1
+    tag: v8.0.1
   # -- Extra arguments for csi-snapshotter controller sidecar
   extraArgs: []
 # -- Node sidecar for plugin registration
 csiNodeRegistrar:
   image:
     repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    tag: v2.3.0
+    tag: v2.9.0
   # -- Extra arguments for csi-node-registrar node sidecar
   extraArgs: []
 controller:
@@ -67,7 +67,7 @@ multipathd:
 nodeLivenessProbe:
   image:
     repository: registry.k8s.io/sig-storage/livenessprobe
-    tag: v2.4.0
+    tag: v2.12.0
   # -- Extra arguments for the node's liveness probe containers
   extraArgs: []
 nodeServer:
