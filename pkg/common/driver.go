@@ -27,6 +27,7 @@ const (
 	FsTypeConfigKey           = "fsType"
 	PoolConfigKey             = "pool"
 	APIAddressConfigKey       = "apiAddress"
+	APIAddressBConfigKey      = "apiAddressB"
 	UsernameSecretKey         = "username"
 	PasswordSecretKey         = "password"
 	CHAPUsernameKey           = "CHAPusername"
