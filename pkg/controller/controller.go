@@ -234,6 +234,7 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	username := string(credentials[common.UsernameSecretKey])
 	password := string(credentials[common.PasswordSecretKey])
 	apiAddr := string(credentials[common.APIAddressConfigKey])
+	secondaryapiAddr := string(credentials[common.APIAddressBConfigKey])
 
 	if len(username) == 0 {
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.UsernameSecretKey))
@@ -243,17 +244,18 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.PasswordSecretKey))
 	}
 
+	// at least one api address must be defined, the secondary address is an optional parameter
 	if len(apiAddr) == 0 {
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("(%s) is missing from secrets", common.APIAddressConfigKey))
 	}
 
-	klog.InfoS("using API", "address", apiAddr)
-	if controller.client.SessionValid(apiAddr, username) {
-		return nil
+	apiAddresses := []string{apiAddr}
+	if secondaryapiAddr != "" {
+		apiAddresses = append(apiAddresses, secondaryapiAddr)
 	}
+	klog.InfoS("using API", "addresses", apiAddresses)
 
-	//these stored credentials are still used for the session valid check
-	controller.client.StoreCredentials(apiAddr, "", username, password)
+	controller.client.StoreCredentials(apiAddresses, "", username, password)
 
 	ctx := context.WithValue(context.Background(), client.ContextBasicAuth, client.BasicAuth{
 		UserName: username,
