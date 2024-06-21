@@ -1,3 +1,14 @@
+# [1.9.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.5...v1.9.0) (2024-06-21)
+
+### Chores
+
+- update sidecar versions and timeouts for api lib failover update ([180713f](https://github.com/Seagate/seagate-exos-x-csi/commit/180713ffa2ca84dfbf410bff049821c298abbbc6))
+- update version for 1.9.0 release ([e22a0d0](https://github.com/Seagate/seagate-exos-x-csi/commit/e22a0d0c1180811f444218979025ba14d3553cd5))
+
+### Features
+
+- Update to seagate-exos-x-api-go version 2.3.0 for controller failover ([50a4711](https://github.com/Seagate/seagate-exos-x-csi/commit/50a4711342e2ec91cc2f67db07c193f7ff46a69e))
+
 ## [1.8.5](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.4...v1.8.5) (2024-02-27)
 
 ### Chores
