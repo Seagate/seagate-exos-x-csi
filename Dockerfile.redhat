@@ -28,7 +28,7 @@ RUN ls -l /
 
 FROM registry.access.redhat.com/ubi8
 
-ARG version=v1.8.5
+ARG version=v1.9.0
 ARG vcs_ref=e8ce79173c18f52e1495a9bdf10bc72cb1e88f03
 ARG build_date=2024-02-16T22:09:11+00:00
 ARG vendor=Seagate
