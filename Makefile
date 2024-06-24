@@ -120,7 +120,7 @@ openshift:
 # just pass these variables in the environment instead of a file.
 -include Makefile.secrets
 
-PREFLIGHT=../openshift-preflight/preflight
+PREFLIGHT=../openshift-preflight/preflight-linux-amd64 # Path to the preflight executable
 PREFLIGHT_REGISTRY=localhost:5000
 PREFLIGHT_IMAGE=$(PREFLIGHT_REGISTRY)/$(BIN):$(VERSION)
 REDHAT_PROJECT_ID=610494ea40182fa9651cdab0
@@ -132,7 +132,7 @@ PREFLIGHT_SUBMIT=
 PFLT_DOCKERCONFIG=.preflight-auth.json
 
 preflight: $(PFLT_DOCKERCONFIG)
-	-docker run -d -p 5000:5000 --name registry registry:2 # make sure local registry is running
+	-docker start registry || -docker run -d -p 5000:5000 --name registry registry:2 # make sure local registry is running
 	docker tag $(IMAGE) $(PREFLIGHT_IMAGE)
 	docker push $(PREFLIGHT_IMAGE)
 	PFLT_DOCKERCONFIG=$(PFLT_DOCKERCONFIG) $(PREFLIGHT) check container $(PREFLIGHT_SUBMIT) $(PREFLIGHT_OPTIONS) $(PREFLIGHT_IMAGE)
@@ -153,10 +153,6 @@ preflight-push:
 
 .preflight-auth.json:
 	podman login -u redhat-isv-containers+610494ea40182fa9651cdab0-robot -p $(REGISTRY_KEY) --authfile "$@" quay.io
-
-build-preflight:
-	(cd ..; git clone https://github.com/redhat-openshift-ecosystem/openshift-preflight.git)
-	cd ../openshift-preflight && make build
 
 ######################## Helm package creation ########################
 
