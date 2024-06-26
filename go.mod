@@ -7,7 +7,7 @@ require (
 	github.com/Seagate/csi-lib-sas v1.0.2
 	github.com/Seagate/seagate-exos-x-api-go/v2 v2.3.0
 	github.com/container-storage-interface/spec v1.8.0
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/kubernetes-csi/csi-test v0.0.0-20191016154743-6931aedb3df0
@@ -16,7 +16,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	golang.org/x/sync v0.3.0
 	google.golang.org/grpc v1.59.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 	k8s.io/klog/v2 v2.100.1
 )
 
