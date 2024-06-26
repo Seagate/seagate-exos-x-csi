@@ -7,7 +7,7 @@ require (
 	github.com/Seagate/csi-lib-sas v1.0.2
 	github.com/Seagate/seagate-exos-x-api-go/v2 v2.2.0
 	github.com/container-storage-interface/spec v1.8.0
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/kubernetes-csi/csi-test v0.0.0-20191016154743-6931aedb3df0
