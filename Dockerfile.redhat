@@ -4,10 +4,10 @@
 # line, or for args to be updated in this file prior to building.  See
 # the ARG section below.
 
-FROM registry.access.redhat.com/ubi8/go-toolset:1.20 AS build
+FROM registry.access.redhat.com/ubi8/go-toolset:1.22 AS build
 
 USER root
-ENV PATH="${PATH}:/opt/rh/go-toolset-1.19/root/usr/bin/"
+ENV PATH="${PATH}:/opt/rh/go-toolset-1.22/root/usr/bin/"
 RUN printenv
 RUN echo "glibc build image info:" && ldd --version
 RUN go version
@@ -28,9 +28,9 @@ RUN ls -l /
 
 FROM registry.access.redhat.com/ubi8
 
-ARG version=v1.9.0
-ARG vcs_ref=e8ce79173c18f52e1495a9bdf10bc72cb1e88f03
-ARG build_date=2024-02-16T22:09:11+00:00
+ARG version=1.10.0
+ARG vcs_ref=a0cba8c064b812f300311a78980ffb9dc6cc03ba
+ARG build_date=2025-01-11T21:00:24+00:00
 ARG vendor=Seagate
 ARG family="Exos X"
 ARG app="${family} CSI Driver"
