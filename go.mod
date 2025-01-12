@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/Seagate/csi-lib-iscsi v1.1.0
 	github.com/Seagate/csi-lib-sas v1.0.2
-	github.com/Seagate/seagate-exos-x-api-go/v2 v2.4.0
+	github.com/Seagate/seagate-exos-x-api-go/v2 v2.4.1
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
