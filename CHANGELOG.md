@@ -1,3 +1,20 @@
+## [1.9.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.9.0...v1.9.1) (2025-01-12)
+
+### Build System
+
+- update preflight process ([53ab7d3](https://github.com/Seagate/seagate-exos-x-csi/commit/53ab7d3931079ed73adb4b1ac49a60c3daaa0195))
+
+### Chores
+
+- **deps-dev:** bump braces from 3.0.2 to 3.0.3 ([a0cba8c](https://github.com/Seagate/seagate-exos-x-csi/commit/a0cba8c064b812f300311a78980ffb9dc6cc03ba))
+- **deps:** bump golang.org/x/net from 0.17.0 to 0.23.0 ([d3028bf](https://github.com/Seagate/seagate-exos-x-csi/commit/d3028bf201fface9948179454c22fd5f1c7dddb1))
+- **deps:** bump google.golang.org/protobuf from 1.31.0 to 1.33.0 (#103) ([9ac26f5](https://github.com/Seagate/seagate-exos-x-csi/commit/9ac26f57de4685ab5e1af371d228ee29522d76a7)), closes [#103](https://github.com/Seagate/seagate-exos-x-csi/issues/103)
+
+### Other
+
+- Host hostgroup support (#117) ([21272a5](https://github.com/Seagate/seagate-exos-x-csi/commit/21272a5a0c5b1d24336eec6e12ec1e1bd87f9fb7)), closes [#117](https://github.com/Seagate/seagate-exos-x-csi/issues/117)
+- Add .whitesource configuration file ([f20a164](https://github.com/Seagate/seagate-exos-x-csi/commit/f20a16462e6b395950a5c875080f7299cccb073f))
+
 # [1.9.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.8.5...v1.9.0) (2024-06-21)
 
 ### Chores
