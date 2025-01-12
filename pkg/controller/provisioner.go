@@ -115,7 +115,7 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		} else {
 			volume, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey])
 			if err2 != nil {
-				return nil, err
+				return nil, err2
 			}
 			if volume != nil {
 				wwn = volume.Wwn
