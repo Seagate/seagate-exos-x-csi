@@ -1,3 +1,9 @@
+# [1.10.0](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.9.1...v1.10.0) (2025-01-13)
+
+### Features
+
+- Bump version to 1.10.0 for Host and Host Group LUN selection ([0d187d7](https://github.com/Seagate/seagate-exos-x-csi/commit/0d187d74d719508d950aca47c9096579c19cb782))
+
 ## [1.9.1](https://github.com/Seagate/seagate-exos-x-csi/compare/v1.9.0...v1.9.1) (2025-01-12)
 
 ### Build System
