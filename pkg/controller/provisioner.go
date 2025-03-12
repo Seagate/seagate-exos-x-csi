@@ -102,10 +102,10 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			if err != nil {
 				return nil, err
 			}
-			apistatus, err2 := controller.client.CopyVolume(sourceName, volumeName, parameters[common.PoolConfigKey])
+			apiStatus, err2 := controller.client.CopyVolume(sourceName, volumeName, parameters[common.PoolConfigKey])
 			if err2 != nil {
-				klog.Infof("-- CopyVolume apistatus.ReturnCode %v", apistatus.ReturnCode)
-				if apistatus != nil && apistatus.ReturnCode == storageapitypes.SnapshotNotFoundErrorCode {
+				klog.Infof("-- CopyVolume apiStatus.ReturnCode %v", apiStatus.ReturnCode)
+				if apiStatus != nil && apiStatus.ReturnCode == storageapitypes.SnapshotNotFoundErrorCode {
 					return nil, status.Errorf(codes.NotFound, "Snapshot source (%s) not found", sourceId)
 				} else {
 					return nil, err2
@@ -113,9 +113,11 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 			}
 
 		} else {
-			volume, _, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey])
+			volume, apiStatus, err2 := controller.client.CreateVolume(volumeName, sizeStr, parameters[common.PoolConfigKey])
 			if err2 != nil {
 				return nil, err2
+			} else if apiStatus.ResponseTypeNumeric != 0 {
+				return nil, status.Errorf(codes.Unknown, "Error creating volume: %s", apiStatus.Response)
 			}
 			if volume != nil {
 				wwn = volume.Wwn
