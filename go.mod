@@ -1,6 +1,7 @@
 module github.com/Seagate/seagate-exos-x-csi
 
 go 1.22
+toolchain go1.23.7
 
 require (
 	github.com/Seagate/csi-lib-iscsi v1.1.0
@@ -14,7 +15,7 @@ require (
 	github.com/onsi/gomega v1.28.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.11.0
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.35.1
 	k8s.io/klog/v2 v2.100.1
@@ -33,9 +34,9 @@ require (
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
