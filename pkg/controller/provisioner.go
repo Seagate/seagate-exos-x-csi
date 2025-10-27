@@ -60,6 +60,12 @@ func (controller *Controller) CreateVolume(ctx context.Context, req *csi.CreateV
 		return nil, status.Error(codes.InvalidArgument, "translate volume name contains invalid characters")
 	}
 
+	// Ensure operations for this volume are serialized to avoid races where a
+	// ControllerPublishVolume runs while CreateVolume is still in progress and
+	// leaves incomplete volume context (for example missing iSCSI portals).
+	volumeLocks.Lock(volumeName)
+	defer volumeLocks.Unlock(volumeName)
+
 	// Extract the storage interface protocol to be used for this volume (iscsi, fc, sas, etc)
 	storageProtocol := storage.ValidateStorageProtocol(parameters[common.StorageProtocolKey])
 
