@@ -162,6 +162,23 @@ func (node *Node) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapab
 	return &csi.NodeGetCapabilitiesResponse{Capabilities: csc}, nil
 }
 
+// validateNodePublishVolumeCapability enforces the live-migration policy for multi-node block attach.
+func validateNodePublishVolumeCapability(capability *csi.VolumeCapability) error {
+	if capability == nil {
+		return status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
+	}
+	if capability.GetBlock() != nil && capability.GetMount() != nil {
+		return status.Error(codes.InvalidArgument, "cannot have both block and mount access type")
+	}
+	if capability.GetBlock() == nil && capability.GetMount() == nil {
+		return status.Error(codes.InvalidArgument, "volume access type not specified, must be either block or mount")
+	}
+	if capability.GetAccessMode().GetMode() == csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER && capability.GetMount() != nil {
+		return status.Error(codes.FailedPrecondition, "MULTI_NODE_MULTI_WRITER is only supported for multi-node block attach during live migration")
+	}
+	return nil
+}
+
 // NodePublishVolume mounts the device to the target path
 func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	if len(req.GetVolumeId()) == 0 {
@@ -170,16 +187,8 @@ func (node *Node) NodePublishVolume(ctx context.Context, req *csi.NodePublishVol
 	if len(req.GetTargetPath()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot publish volume at an empty path")
 	}
-	if req.GetVolumeCapability() == nil {
-		return nil, status.Error(codes.InvalidArgument, "cannot publish volume without capabilities")
-	}
-	if req.GetVolumeCapability().GetBlock() != nil &&
-		req.GetVolumeCapability().GetMount() != nil {
-		return nil, status.Error(codes.InvalidArgument, "cannot have both block and mount access type")
-	}
-	if req.GetVolumeCapability().GetBlock() == nil &&
-		req.GetVolumeCapability().GetMount() == nil {
-		return nil, status.Error(codes.InvalidArgument, "volume access type not specified, must be either block or mount")
+	if err := validateNodePublishVolumeCapability(req.GetVolumeCapability()); err != nil {
+		return nil, err
 	}
 	// Extract the volume name and the storage protocol from the augmented volume id
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())

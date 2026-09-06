@@ -200,24 +200,5 @@ func getSizeStr(size int64) string {
 
 // isValidVolumeCapabilities validates the given VolumeCapability array is valid
 func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
-	if len(volCaps) == 0 {
-		return fmt.Errorf("volume capabilities to validate not provided")
-	}
-
-	hasSupport := func(cap *csi.VolumeCapability) bool {
-		for _, supportedMode := range common.SupportedAccessModes {
-			// we currently support block and mount volumes with both supported access modes, so don't check mount types
-			if cap.GetAccessMode().Mode == supportedMode {
-				return true
-			}
-		}
-		return false
-	}
-
-	for _, c := range volCaps {
-		if !hasSupport(c) {
-			return fmt.Errorf("driver does not support access mode %v", c.GetAccessMode())
-		}
-	}
-	return nil
+	return validateAccessModes(volCaps)
 }

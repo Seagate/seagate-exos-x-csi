@@ -167,8 +167,8 @@ func (controller *Controller) ValidateVolumeCapabilities(ctx context.Context, re
 	if len(volumeName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "cannot validate volume with empty ID")
 	}
-	if len(req.GetVolumeCapabilities()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "cannot validate volume without capabilities")
+	if err := validateAccessModes(req.GetVolumeCapabilities()); err != nil {
+		return nil, err
 	}
 	_, _, err := controller.client.ShowVolumes(volumeName)
 	if err != nil {
@@ -272,6 +272,27 @@ func (controller *Controller) configureClient(credentials map[string]string) err
 	return err
 }
 
+func validateAccessModes(capabilities []*csi.VolumeCapability) error {
+	if len(capabilities) == 0 {
+		return status.Error(codes.InvalidArgument, "missing volume capabilities")
+	}
+
+	for _, capability := range capabilities {
+		accessMode := capability.GetAccessMode().GetMode()
+		accessModeSupported := false
+		for _, mode := range common.SupportedAccessModes {
+			if accessMode == mode {
+				accessModeSupported = true
+			}
+		}
+		if !accessModeSupported {
+			return status.Errorf(codes.FailedPrecondition, "driver does not support access mode %v", accessMode)
+		}
+	}
+
+	return nil
+}
+
 func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.VolumeCapability) error {
 	checkIfKeyExistsInConfig := func(key string) error {
 		if parameters == nil {
@@ -291,20 +312,10 @@ func runPreflightChecks(parameters map[string]string, capabilities *[]*csi.Volum
 	}
 
 	if capabilities != nil {
-		if len(*capabilities) == 0 {
-			return status.Error(codes.InvalidArgument, "missing volume capabilities")
+		if err := validateAccessModes(*capabilities); err != nil {
+			return err
 		}
 		for _, capability := range *capabilities {
-			accessMode := capability.GetAccessMode().GetMode()
-			accessModeSupported := false
-			for _, mode := range common.SupportedAccessModes {
-				if accessMode == mode {
-					accessModeSupported = true
-				}
-			}
-			if !accessModeSupported {
-				return status.Errorf(codes.FailedPrecondition, "driver does not support access mode %v", accessMode)
-			}
 			if mount := capability.GetMount(); mount != nil {
 				if mount.GetFsType() == "" {
 					if err := checkIfKeyExistsInConfig(common.FsTypeConfigKey); err != nil {
