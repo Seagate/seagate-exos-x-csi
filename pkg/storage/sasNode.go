@@ -243,11 +243,8 @@ func (sas *sasStorage) NodeExpandVolume(ctx context.Context, req *csi.NodeExpand
 	}
 
 	if req.GetVolumeCapability().GetMount() != nil {
-		klog.Infof("expanding filesystem using resize2fs on device %s", connector.OSPathName)
-		output, err := exec.Command("resize2fs", connector.OSPathName).CombinedOutput()
-		if err != nil {
-			klog.V(2).InfoS("could not resize filesystem", "resize2fs output", output)
-			return nil, fmt.Errorf("could not resize filesystem: %v", output)
+		if err := ResizeFilesystem(connector.OSPathName, volumepath); err != nil {
+			return nil, err
 		}
 	}
 

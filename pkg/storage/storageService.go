@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -40,6 +41,26 @@ const (
 	SASAddressFilePath = "/etc/kubernetes/sas-addresses"
 	FCAddressFilePath  = "/etc/kubernetes/fc-addresses"
 )
+
+var (
+	execCommand        = exec.Command
+	execCommandContext = exec.CommandContext
+	readDir            = os.ReadDir
+	readFile           = os.ReadFile
+	evalSymlinks       = filepath.EvalSymlinks
+)
+
+const diskByIDPath = "/dev/disk/by-id"
+
+func normalizeWWN(wwn string) string {
+	wwn = strings.ToLower(strings.TrimSpace(wwn))
+	wwn = strings.TrimPrefix(wwn, "mpath-")
+	wwn = strings.TrimPrefix(wwn, "dm-name-")
+	if strings.HasPrefix(wwn, "3") {
+		wwn = strings.TrimPrefix(wwn, "3")
+	}
+	return wwn
+}
 
 type StorageOperations interface {
 	csi.NodeServer
@@ -134,23 +155,33 @@ func GetFsType(req *csi.NodePublishVolumeRequest) string {
 	return fsType
 }
 
-// CheckFs: Perform a file system validation
-func CheckFs(path string, fstype string, context string) error {
+// filesystemValidator returns the validation command used before trusting a detected filesystem.
+func filesystemValidator(fsType string) string {
+	if fsType == "xfs" {
+		return "xfs_repair"
+	}
+	if strings.HasPrefix(fsType, "ext") {
+		return "e2fsck"
+	}
+	return ""
+}
 
-	if IsVolumeInUse(path) {
-		klog.Infof("Volume already mounted, not performing FS check")
-		return nil
+func isValidFilesystem(fsType, devicePath string) bool {
+	validator := filesystemValidator(fsType)
+	if validator == "" {
+		klog.Infof("No filesystem validator available for %s on device %s; treating detected filesystem as valid", fsType, devicePath)
+		return true
 	}
 
-	fsRepairCommand := "e2fsck"
-	if fstype == "xfs" {
-		fsRepairCommand = "xfs_repair"
+	klog.Infof("Validating detected %s filesystem on device %s with %s -n", fsType, devicePath, validator)
+	out, err := execCommand(validator, "-n", devicePath).CombinedOutput()
+	if err != nil {
+		klog.Infof("Filesystem validation failed for %s on device %s: %s", fsType, devicePath, strings.TrimSpace(string(out)))
+		return false
 	}
-	klog.Infof("Checking filesystem (%s -n %s) [%s]", fsRepairCommand, path, context)
-	if out, err := exec.Command(fsRepairCommand, "-n", path).CombinedOutput(); err != nil {
-		return errors.New(string(out))
-	}
-	return nil
+
+	klog.Infof("Filesystem validation succeeded for %s on device %s", fsType, devicePath)
+	return true
 }
 
 // Check for and remove any rediscovered iscsi devices that were previously unmapped
@@ -169,13 +200,71 @@ func CheckPreviouslyRemovedDevices(ctx context.Context) error {
 	return nil
 }
 
+func resolveDeviceWWN(devicePath string) (string, error) {
+	resolvedDevicePath, err := evalSymlinks(devicePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve device path %s: %w", devicePath, err)
+	}
+
+	dmName := filepath.Base(resolvedDevicePath)
+	if strings.HasPrefix(dmName, "dm-") {
+		sysfsUUIDPath := filepath.Join("/sys/block", dmName, "dm", "uuid")
+		uuidBytes, err := readFile(sysfsUUIDPath)
+		if err == nil {
+			return normalizeWWN(string(uuidBytes)), nil
+		}
+	}
+
+	entries, err := readDir(diskByIDPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", diskByIDPath, err)
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasPrefix(name, "dm-name-3") {
+			continue
+		}
+
+		byIDPath := filepath.Join(diskByIDPath, name)
+		resolvedByIDPath, err := evalSymlinks(byIDPath)
+		if err != nil {
+			continue
+		}
+
+		if resolvedByIDPath == resolvedDevicePath {
+			return normalizeWWN(name), nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to resolve WWN for device path %s", devicePath)
+}
+
+func ValidateAttachedDeviceWWN(volumeName, devicePath, expectedWWN string) error {
+	resolvedWWN, err := resolveDeviceWWN(devicePath)
+	if err != nil {
+		klog.Errorf("Failed to resolve attached device WWN: volumeName=%s devicePath=%s expectedWWN=%s err=%v", volumeName, devicePath, expectedWWN, err)
+		return err
+	}
+
+	expectedWWN = normalizeWWN(expectedWWN)
+	klog.Infof("Attached device validation: volumeName=%s devicePath=%s resolvedWWN=%s expectedWWN=%s", volumeName, devicePath, resolvedWWN, expectedWWN)
+	if resolvedWWN != expectedWWN {
+		err := fmt.Errorf("attached device WWN mismatch for volume %s: expected %s, got %s for %s", volumeName, expectedWWN, resolvedWWN, devicePath)
+		klog.Errorf("%v", err)
+		return err
+	}
+
+	return nil
+}
+
 // FindDeviceFormat:
 func FindDeviceFormat(device string) (string, error) {
 	klog.V(2).Infof("Trying to find filesystem format on device %q", device)
 
 	ctx, cancel := context.WithTimeout(context.Background(), BlkidTimeout*time.Second)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, "blkid",
+	output, err := execCommandContext(ctx, "blkid",
 		"-p",
 		"-s", "TYPE",
 		"-s", "PTTYPE",
@@ -223,6 +312,119 @@ func FindDeviceFormat(device string) (string, error) {
 	return filesystemType, nil
 }
 
+func resizeCommandForFs(fsType, devicePath, volumePath string) (string, []string, error) {
+	switch {
+	case fsType == "xfs":
+		return "xfs_growfs", []string{volumePath}, nil
+	case strings.HasPrefix(fsType, "ext"):
+		return "resize2fs", []string{devicePath}, nil
+	case fsType == "":
+		return "", nil, fmt.Errorf("could not determine filesystem type for device %s", devicePath)
+	default:
+		return "", nil, fmt.Errorf("unsupported filesystem %q for resize on device %s", fsType, devicePath)
+	}
+}
+
+func exitCodeFromError(err error) int {
+	if err == nil {
+		return 0
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		return exitErr.ExitCode()
+	}
+	return -1
+}
+
+func runLoggedCommand(name string, args ...string) ([]byte, error) {
+	klog.Infof("Running command: %s %s", name, strings.Join(args, " "))
+	output, err := execCommand(name, args...).CombinedOutput()
+	exitCode := exitCodeFromError(err)
+	klog.Infof("Command output: %s", string(output))
+	klog.Infof("Command exit code: %d", exitCode)
+	if err != nil {
+		klog.Errorf("Command failed: %s %s", name, strings.Join(args, " "))
+		return output, fmt.Errorf("command %s %s failed with exit code %d: %s", name, strings.Join(args, " "), exitCode, string(output))
+	}
+	return output, nil
+}
+
+func ResizeFilesystem(devicePath, volumePath string) error {
+	fsType, err := FindDeviceFormat(devicePath)
+	if err != nil {
+		klog.Errorf("Failed to detect filesystem for device %s: %v", devicePath, err)
+		return err
+	}
+	klog.Infof("Detected filesystem: %s", fsType)
+	klog.Infof("Resize target device path: %s", devicePath)
+	klog.Infof("Resize target mount path: %s", volumePath)
+
+	command, args, err := resizeCommandForFs(fsType, devicePath, volumePath)
+	if err != nil {
+		klog.Errorf("Failed to determine resize command for filesystem %s on device %s with mount path %s: %v", fsType, devicePath, volumePath, err)
+		return err
+	}
+
+	dfBefore, err := runLoggedCommand("df", "-T", volumePath)
+	if err != nil {
+		klog.Errorf("Failed to collect filesystem state before resize for mount path %s: %v", volumePath, err)
+		return fmt.Errorf("failed to collect filesystem state before resize for %s: %w", volumePath, err)
+	}
+	klog.Infof("Filesystem before resize: %s", string(dfBefore))
+
+	klog.Infof("Expanding %s filesystem using %s", fsType, command)
+	if _, err := runLoggedCommand(command, args...); err != nil {
+		klog.Errorf("Filesystem resize failed for fsType=%s devicePath=%s volumePath=%s: %v", fsType, devicePath, volumePath, err)
+		return fmt.Errorf("could not resize filesystem for fsType=%s devicePath=%s volumePath=%s: %w", fsType, devicePath, volumePath, err)
+	}
+
+	dfAfter, err := runLoggedCommand("df", "-T", volumePath)
+	if err != nil {
+		klog.Errorf("Failed to collect filesystem state after resize for mount path %s: %v", volumePath, err)
+		return fmt.Errorf("failed to collect filesystem state after resize for %s: %w", volumePath, err)
+	}
+	klog.Infof("Filesystem after resize: %s", string(dfAfter))
+
+	return nil
+}
+
+func mountTarget(fsType, devicePath, targetPath string) error {
+	args := []string{"-t", fsType, devicePath, targetPath}
+	klog.V(4).Infof("Running mount command: mount %s", strings.Join(args, " "))
+	out, err := execCommand("mount", args...).CombinedOutput()
+	if err == nil {
+		return nil
+	}
+	klog.Errorf("Mount failed: cmd='mount %s' err='%v' output='%s'",
+		strings.Join(args, " "),
+		err,
+		strings.TrimSpace(string(out)),
+	)
+
+	if fsType != "xfs" {
+		return status.Error(codes.Internal, string(out))
+	}
+
+	// XFS preserves filesystem UUIDs across clones and snapshots. Linux refuses
+	// to mount multiple XFS filesystems with the same UUID on the same node, so
+	// retry with nouuid to allow cloned volumes to mount together.
+	klog.Infof("xfs mount failed for %s, retrying with nouuid", devicePath)
+	retryArgs := []string{"-t", fsType, "-o", "nouuid", devicePath, targetPath}
+	klog.V(4).Infof("Running mount command: mount %s", strings.Join(retryArgs, " "))
+	retryOut, retryErr := execCommand("mount", retryArgs...).CombinedOutput()
+	if retryErr != nil {
+		klog.Errorf("Mount retry failed: cmd='mount %s' err='%v' output='%s'",
+			strings.Join(retryArgs, " "),
+			retryErr,
+			strings.TrimSpace(string(retryOut)),
+		)
+		errStr := fmt.Sprintf("%s; xfs retry with nouuid failed: %s", strings.TrimSpace(string(out)), strings.TrimSpace(string(retryOut)))
+		return status.Error(codes.Internal, errStr)
+	}
+
+	klog.InfoS("successfully mounted xfs volume with nouuid", "devicePath", devicePath, "targetPath", targetPath)
+	return nil
+}
+
 // EnsureFsType:
 func EnsureFsType(fsType string, disk string) error {
 	currentFsType, err := FindDeviceFormat(disk)
@@ -230,17 +432,25 @@ func EnsureFsType(fsType string, disk string) error {
 		return err
 	}
 
-	klog.V(1).Infof("Detected filesystem: %q", currentFsType)
-	if currentFsType != fsType {
-		if currentFsType != "" {
-			return fmt.Errorf("Could not create %s filesystem on device %s since it already has one (%s)", fsType, disk, currentFsType)
+	klog.Infof("Detected filesystem from blkid on device %s: %q", disk, currentFsType)
+	switch {
+	case currentFsType == "":
+		klog.Infof("Device %s is unformatted; creating %s filesystem", disk, fsType)
+	case currentFsType != fsType:
+		return fmt.Errorf("Could not create %s filesystem on device %s since it already has one (%s)", fsType, disk, currentFsType)
+	default:
+		valid := isValidFilesystem(fsType, disk)
+		klog.Infof("Filesystem validation result for %s on device %s: %t", fsType, disk, valid)
+		if valid {
+			return nil
 		}
+		klog.Infof("Detected %s filesystem on device %s is invalid; recreating filesystem", fsType, disk)
+	}
 
-		klog.Infof("Creating %s filesystem on device %s", fsType, disk)
-		out, err := exec.Command(fmt.Sprintf("mkfs.%s", fsType), disk).CombinedOutput()
-		if err != nil {
-			return errors.New(string(out))
-		}
+	klog.Infof("Creating %s filesystem on device %s", fsType, disk)
+	out, err := execCommand(fmt.Sprintf("mkfs.%s", fsType), disk).CombinedOutput()
+	if err != nil {
+		return errors.New(string(out))
 	}
 
 	return nil
@@ -253,21 +463,15 @@ func MountFilesystem(req *csi.NodePublishVolumeRequest, path string) error {
 		return status.Error(codes.Internal, err.Error())
 	}
 
-	if err = CheckFs(path, fsType, "Publish"); err != nil {
-		return err
-	}
-
-	out, err := exec.Command("findmnt", "--output", "TARGET", "--noheadings", path).Output()
+	out, err := execCommand("findmnt", "--output", "TARGET", "--noheadings", path).Output()
 	mountpoints := strings.Split(strings.Trim(string(out), "\n"), "\n")
 	if err != nil || len(mountpoints) == 0 {
-		klog.V(1).InfoS("mount", "command", fmt.Sprintf("mount -t %s %s %s", fsType, path, req.GetTargetPath()))
 		os.Mkdir(req.GetTargetPath(), 00755)
 		if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
 			klog.InfoS("targetpath does not exist", "targetPath", req.GetTargetPath())
 		}
-		out, err = exec.Command("mount", "-t", fsType, path, req.GetTargetPath()).CombinedOutput()
-		if err != nil {
-			return status.Error(codes.Internal, string(out))
+		if err = mountTarget(fsType, path, req.GetTargetPath()); err != nil {
+			return err
 		}
 	} else if len(mountpoints) == 1 {
 		if mountpoints[0] == req.GetTargetPath() {

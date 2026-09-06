@@ -81,6 +81,7 @@ func New() *Node {
 		//	"e2fsck",     // check a Linux ext2/ext3/ext4 file system
 		//	"mkfs.ext4",  // create an ext2/ext3/ext4 filesystem
 		//	"resize2fs",  // ext2/ext3/ext4 file system resizer
+		"xfs_growfs", // xfs file system resizer
 	}
 
 	klog.Infof("Checking (%d) binaries", len(requiredBinaries))
