@@ -208,6 +208,7 @@ func GetFCInitiators() ([]string, error) {
 
 	klog.InfoS("begin FC address discovery")
 	fcAddrFilename := "port_name"
+	fcStateFilename := "port_state"
 	scsiHostBasePath := "/sys/class/fc_host/"
 
 	dirList, err := os.ReadDir(scsiHostBasePath)
@@ -219,9 +220,6 @@ func GetFCInitiators() ([]string, error) {
 	for _, hostDir := range dirList {
 		fcAddrFile := filepath.Join(scsiHostBasePath, hostDir.Name(), fcAddrFilename)
 		addrBytes, err := os.ReadFile(fcAddrFile)
-		address := string(addrBytes)
-		address = strings.TrimLeft(strings.TrimRight(address, "\n"), "0x")
-
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				continue
@@ -229,9 +227,22 @@ func GetFCInitiators() ([]string, error) {
 				klog.ErrorS(err, "error searching for FC HBA addresses", "path", fcAddrFile)
 				return nil, err
 			}
-		} else {
-			klog.InfoS("found FC initiator address", "address", address)
+		}
+		address := string(addrBytes)
+		address = strings.TrimLeft(strings.TrimRight(address, "\n"), "0x")
+
+		fcStateFile := filepath.Join(scsiHostBasePath, hostDir.Name(), fcStateFilename)
+		stateBytes, err := os.ReadFile(fcStateFile)
+		if err != nil {
+			klog.ErrorS(err, "error reading FC port state", "path", fcStateFile)
+			continue
+		}
+		state := strings.TrimSpace(string(stateBytes))
+		if state == "Online" {
+			klog.InfoS("found FC initiator address: %s (state: %s)\n", address, state)
 			discoveredFCAddresses = append(discoveredFCAddresses, address)
+		} else {
+			klog.InfoS("skipping FC initiator address: %s (state: %s)\n", address, state)
 		}
 	}
 	return discoveredFCAddresses, nil
