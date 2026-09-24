@@ -36,6 +36,12 @@ func (driver *Controller) ControllerPublishVolume(ctx context.Context, req *csi.
 
 	volumeName, _ := common.VolumeIdGetName(req.GetVolumeId())
 
+	// Serialize operations on the same volume name with CreateVolume to avoid
+	// races where publish runs while create is still populating volume context
+	// (like iSCSI portals).
+	volumeLocks.Lock(volumeName)
+	defer volumeLocks.Unlock(volumeName)
+
 	klog.InfoS("attach request", "initiator(s)", initiators, "volume", volumeName)
 
 	lun, err := driver.client.PublishVolume(volumeName, initiators)

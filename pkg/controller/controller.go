@@ -40,6 +40,11 @@ var csiMutexes = map[string]*sync.Mutex{
 	"/csi.v1.Controller/ControllerExpandVolume":    {},
 }
 
+// volumeLocks is a map of per-volume mutexes to avoid races between
+// CreateVolume and ControllerPublishVolume for the same volume name.
+// Use common.NewStringLock() for reference-counted locks.
+var volumeLocks = common.NewStringLock()
+
 var nonAuthenticatedMethods = []string{
 	"/csi.v1.Controller/ControllerGetCapabilities",
 	"/csi.v1.Controller/ListVolumes",
