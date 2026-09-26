@@ -142,12 +142,22 @@ func CheckFs(path string, fstype string, context string) error {
 		return nil
 	}
 
+	// Default to ext-style preen mode: e2fsck -p auto-corrects minor issues
+	// (dirty journal, free-block bitmap drift, missing dot entries) that an
+	// unclean shutdown commonly leaves behind, while still failing on hard
+	// corruption that requires operator review. This avoids the -n trap where
+	// a normal-shutdown-but-dirty filesystem blocks every subsequent mount
+	// indefinitely until a human runs e2fsck on the node.
 	fsRepairCommand := "e2fsck"
+	fsRepairFlag := "-p"
 	if fstype == "xfs" {
+		// xfs_repair has no preen mode; keep it read-only to preserve existing
+		// behavior. xfs's own log replay handles the equivalent recovery.
 		fsRepairCommand = "xfs_repair"
+		fsRepairFlag = "-n"
 	}
-	klog.Infof("Checking filesystem (%s -n %s) [%s]", fsRepairCommand, path, context)
-	if out, err := exec.Command(fsRepairCommand, "-n", path).CombinedOutput(); err != nil {
+	klog.Infof("Checking filesystem (%s %s %s) [%s]", fsRepairCommand, fsRepairFlag, path, context)
+	if out, err := exec.Command(fsRepairCommand, fsRepairFlag, path).CombinedOutput(); err != nil {
 		return errors.New(string(out))
 	}
 	return nil
