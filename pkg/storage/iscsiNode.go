@@ -188,6 +188,18 @@ func (iscsi *iscsiStorage) DetachStorage(ctx context.Context, req *csi.NodeUnpub
 	_, err = os.Stat(connector.DevicePath)
 	if err != nil && os.IsNotExist(err) {
 		klog.InfoS("connector.devicePath does not exist, assuming that volume is already disconnected")
+		os.Remove(iscsi.connectorInfoPath)
+		return nil
+	}
+
+	// If the multipath device has no underlying SCSI paths, the array side has
+	// already detached and the device is an orphan dm map that csi-lib-iscsi's
+	// `multipath -f` will refuse to flush (returning a generic exit-1). Treat
+	// this as already-disconnected so subsequent VolumeAttachment cleanup can
+	// proceed; otherwise the kubelet/external-attacher loop forever.
+	if multipathDeviceIsOrphan(connector.DevicePath) {
+		klog.InfoS("multipath device has no underlying SCSI paths, assuming volume is already disconnected at the array side", "device", connector.DevicePath)
+		os.Remove(iscsi.connectorInfoPath)
 		return nil
 	}
 
@@ -198,12 +210,41 @@ func (iscsi *iscsiStorage) DetachStorage(ctx context.Context, req *csi.NodeUnpub
 	klog.Info("DisconnectVolume, detaching ISCSI device")
 	err = iscsilib.DisconnectVolume(*connector)
 	if err != nil {
-		return err
+		// Idempotency: re-check after a failed Disconnect. If the device is
+		// gone, or has been left as an orphan dm map (no underlying SCSI
+		// paths) by a prior partial cleanup, the volume is effectively
+		// disconnected from this node and another retry will not change that.
+		if _, statErr := os.Stat(connector.DevicePath); os.IsNotExist(statErr) {
+			klog.InfoS("DisconnectVolume returned an error but device path is gone, assuming success", "err", err, "device", connector.DevicePath)
+		} else if multipathDeviceIsOrphan(connector.DevicePath) {
+			klog.InfoS("DisconnectVolume returned an error but device has no underlying SCSI paths, assuming success", "err", err, "device", connector.DevicePath)
+		} else {
+			return err
+		}
 	}
 
 	klog.Infof("deleting ISCSI connection info file %s", iscsi.connectorInfoPath)
 	os.Remove(iscsi.connectorInfoPath)
 	return nil
+}
+
+// multipathDeviceIsOrphan reports whether devicePath is a device-mapper device
+// (e.g. /dev/dm-137) whose /sys/block/<name>/slaves directory exists but is
+// empty — meaning the underlying iSCSI paths have already been removed. A dm
+// device in this state cannot be flushed with `multipath -f` (it returns a
+// non-zero exit) and any holders/partitions on top will keep the kernel from
+// removing it on its own, so the safest action is to treat the volume as
+// already disconnected from this node's perspective.
+func multipathDeviceIsOrphan(devicePath string) bool {
+	if devicePath == "" {
+		return false
+	}
+	slavesDir := filepath.Join("/sys/block", filepath.Base(devicePath), "slaves")
+	entries, err := os.ReadDir(slavesDir)
+	if err != nil {
+		return false
+	}
+	return len(entries) == 0
 }
 
 func (iscsi *iscsiStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
