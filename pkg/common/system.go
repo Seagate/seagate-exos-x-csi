@@ -42,15 +42,27 @@ func ValidateName(s string) bool {
 	return true
 }
 
-// TranslateName converts the passed in volume name to the translated volume name
+// TranslateName converts the passed in volume name to the translated volume name,
+// respecting the MC's volume-name length limit.
 func TranslateName(name, prefix string) (string, error) {
+	return translateNameWithMax(name, prefix, VolumeNameMaxLength)
+}
 
-	klog.V(2).Infof("TranslateName VolumeNameMaxLength=%d name=[%d]%q prefix=[%d]%q", VolumeNameMaxLength, len(name), name, len(prefix), prefix)
+// TranslateSnapshotName converts the passed in snapshot name to the translated
+// snapshot name, respecting the MC's snapshot-name length limit (which is
+// shorter than the volume-name limit on ME5-class firmware).
+func TranslateSnapshotName(name, prefix string) (string, error) {
+	return translateNameWithMax(name, prefix, SnapshotNameMaxLength)
+}
+
+func translateNameWithMax(name, prefix string, maxLen int) (string, error) {
+
+	klog.V(2).Infof("TranslateName maxLen=%d name=[%d]%q prefix=[%d]%q", maxLen, len(name), name, len(prefix), prefix)
 	volumeName := name
 
 	if len(prefix) == 0 {
 		// If string is greater than max, truncate it, otherwise return original string
-		if len(volumeName) > VolumeNameMaxLength {
+		if len(volumeName) > maxLen {
 			// Skip over 'pvc-'
 			if len(volumeName) >= 4 && volumeName[0:4] == "pvc-" {
 				volumeName = volumeName[4:]
@@ -61,8 +73,8 @@ func TranslateName(name, prefix string) (string, error) {
 			}
 			volumeName = strings.ReplaceAll(volumeName, "-", "")
 			klog.V(2).Infof("volumeName=[%d]%q", len(volumeName), volumeName)
-			if len(volumeName) > VolumeNameMaxLength {
-				volumeName = volumeName[:VolumeNameMaxLength]
+			if len(volumeName) > maxLen {
+				volumeName = volumeName[:maxLen]
 			}
 		}
 	} else {
@@ -85,8 +97,8 @@ func TranslateName(name, prefix string) (string, error) {
 		}
 		prefix = prefix + "_"
 
-		if len(prefix)+len(uuid) > VolumeNameMaxLength {
-			truncate := VolumeNameMaxLength - len(prefix)
+		if len(prefix)+len(uuid) > maxLen {
+			truncate := maxLen - len(prefix)
 			volumeName = prefix + uuid[len(uuid)-truncate:]
 		} else {
 			volumeName = prefix + uuid

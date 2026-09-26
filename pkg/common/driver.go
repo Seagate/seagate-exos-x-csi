@@ -49,6 +49,13 @@ const (
 
 	MaximumLUN            = 255
 	VolumeNameMaxLength   = 31
+	// SnapshotNameMaxLength is the per-firmware snapshot name limit enforced by the
+	// Exos X MC REST API. For Dell ME5-class firmware the limit is 24 characters;
+	// sending a longer name makes the controller reject the create with
+	// ResponseCode=-10175 ("The specified name is too long") while still returning
+	// HTTP 200, which caused the create path to silently skip creation and fail the
+	// subsequent ShowSnapshots lookup with "snapshot not found".
+	SnapshotNameMaxLength = 24
 	VolumePrefixMaxLength = 3
 
 	//If changed, must also be updated in helm charts

@@ -19,7 +19,7 @@ import (
 func (controller *Controller) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 
 	parameters := req.GetParameters()
-	snapshotName, err := common.TranslateName(req.GetName(), parameters[common.VolumePrefixKey])
+	snapshotName, err := common.TranslateSnapshotName(req.GetName(), parameters[common.VolumePrefixKey])
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "translate snapshot name contains invalid characters")
 	}
