@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -107,6 +108,19 @@ func (iscsi *iscsiStorage) AttachStorage(ctx context.Context, req *csi.NodePubli
 				PasswordIn:  CHAPpasswordIn,
 			}
 		}
+	}
+
+	// Before letting csi-lib-iscsi rescan, purge any stale scsi_device entries
+	// at this LUN number whose WWID does not match the volume we are about to
+	// attach. Linux does not auto-replace scsi_devices when the array reuses a
+	// LUN number for a different volume; leaving the stale entry in place
+	// causes iscsilib.Connect to accept the pre-existing /dev/disk/by-path
+	// symlink (which still points at the previous WWID) and the subsequent
+	// multipath dm-name-<new-WWN> lookup hangs waiting for a device that
+	// cannot appear. Observed with Seagate ME5024 after Velero snapshot-move
+	// clones that reuse freshly-released low-numbered LUNs.
+	if err := purgeStaleScsiLun(iqn, int32(lun), wwn); err != nil {
+		klog.V(1).InfoS("purgeStaleScsiLun returned error (continuing)", "err", err, "iqn", iqn, "lun", lun)
 	}
 
 	klog.V(4).InfoS("iscsi connector setup", "AuthType", authType, "Targets", targets, "Lun", lun)
@@ -272,6 +286,75 @@ func (iscsi *iscsiStorage) NodeGetCapabilities(ctx context.Context, req *csi.Nod
 // NodeGetInfo returns info about the node
 func (iscsi *iscsiStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "NodeGetInfo is not implemented")
+}
+
+// purgeStaleScsiLun removes scsi_device entries at the given LUN on any
+// iSCSI session to the given target IQN whose reported WWID does not match
+// the expected volume WWN. The check is intentionally narrow — only entries
+// at exactly <lun>, only when the WWID disagrees — so it is a no-op on the
+// common case of a fresh mapping with no prior LUN-reuse. Returning an error
+// from this helper is non-fatal to the caller: if the purge fails the
+// normal iSCSI rescan will be attempted anyway and any resulting mismatch
+// will surface as the existing "dm-name not found" timeout.
+func purgeStaleScsiLun(targetIqn string, lun int32, expectedWwn string) error {
+	// Kernel sysfs reports the raw identifier as "naa.<wwn>" — ME5024 WWNs
+	// are NAA type-3 so the bytes stored there are already prefixed with the
+	// "3" high-nibble (e.g. 600c0ff000fb6ca9...). Multipath's dm-name adds
+	// the explicit "3" type digit on top of that to form "3600c0ff...". The
+	// volume handle we receive here tracks the dm-name convention, so strip
+	// any leading "3" before composing the sysfs comparison value.
+	wwn := strings.ToLower(expectedWwn)
+	wwn = strings.TrimPrefix(wwn, "3")
+	expectedWwid := "naa." + wwn
+
+	sessionTargetNames, err := filepath.Glob("/sys/class/iscsi_session/session*/targetname")
+	if err != nil {
+		return fmt.Errorf("glob iscsi sessions: %w", err)
+	}
+
+	for _, tnFile := range sessionTargetNames {
+		raw, err := os.ReadFile(tnFile)
+		if err != nil {
+			continue
+		}
+		if strings.TrimSpace(string(raw)) != targetIqn {
+			continue
+		}
+
+		sessionDir := filepath.Dir(tnFile)
+		scsiDevs, _ := filepath.Glob(sessionDir + "/device/target*/*:*:*:*")
+		for _, devDir := range scsiDevs {
+			hctl := filepath.Base(devDir)
+			parts := strings.Split(hctl, ":")
+			if len(parts) != 4 {
+				continue
+			}
+			l, err := strconv.Atoi(parts[3])
+			if err != nil || int32(l) != lun {
+				continue
+			}
+
+			wwidData, err := os.ReadFile(filepath.Join(devDir, "wwid"))
+			if err != nil {
+				continue
+			}
+			wwid := strings.TrimSpace(string(wwidData))
+			if strings.EqualFold(wwid, expectedWwid) {
+				continue
+			}
+
+			klog.InfoS("purging stale scsi_device at reused LUN before iscsi rescan",
+				"hctl", hctl, "staleWwid", wwid, "expectedWwid", expectedWwid, "targetIqn", targetIqn)
+
+			deletePath := filepath.Join(devDir, "delete")
+			if werr := os.WriteFile(deletePath, []byte("1"), 0); werr != nil {
+				klog.V(1).InfoS("failed to write scsi_device delete trigger",
+					"path", deletePath, "err", werr)
+			}
+		}
+	}
+
+	return nil
 }
 
 func GetISCSIInitiators() ([]string, error) {
